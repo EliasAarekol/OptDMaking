@@ -3,7 +3,7 @@ from collections import deque
 import numpy as np
 from copy import deepcopy,copy
 from node import Node
-from math import floor
+from math import floor,ceil
 class BranchAndBound:
     def __init__(self,init_node,sense):
         self.init_node = init_node
@@ -50,9 +50,12 @@ class BranchAndBound:
         left_branch = deepcopy(self.init_node)
         right_branch = deepcopy(self.init_node)
         left_branch.bounds[branch_var] = (left_branch.bounds[branch_var][0],floor(res.x[branch_var]))
-        right_branch.bounds[branch_var] = (np.ceil(res.x[branch_var]),left_branch.bounds[branch_var][1] )
+        right_branch.bounds[branch_var] = (ceil(res.x[branch_var]),left_branch.bounds[branch_var][1] )
         self.queue.append(left_branch)
         self.queue.append(right_branch)
+        self.init_node.children.append(left_branch)
+        self.init_node.children.append(right_branch)
+
 
         while len(self.queue) > 0:
             node = self.queue.popleft()
@@ -75,10 +78,12 @@ class BranchAndBound:
 
                 left_branch = deepcopy(node)
                 right_branch = deepcopy(node)
-                left_branch.bounds[branch_var] = (left_branch.bounds[branch_var][0],np.floor(res.x[branch_var]))
-                right_branch.bounds[branch_var] = (np.ceil(res.x[branch_var]),left_branch.bounds[branch_var][1] )
+                left_branch.bounds[branch_var] = (left_branch.bounds[branch_var][0],floor(res.x[branch_var]))
+                right_branch.bounds[branch_var] = (ceil(res.x[branch_var]),left_branch.bounds[branch_var][1] )
                 self.queue.append(left_branch)
                 self.queue.append(right_branch)
+                node.children.append(left_branch)
+                node.children.append(right_branch)
 
 
     def all_integer(self,x):
@@ -134,3 +139,40 @@ print(solver.tree)
 #             )
 
 # print(res)
+
+import networkx as nx
+import matplotlib.pyplot as plt
+
+def build_graph(graph, node):
+    if node is None:
+        return
+    
+    graph.add_node(node, bounds=node.bounds)
+    if node.children:
+        for child in node.children:
+            if child:
+                graph.add_edge(node, child)
+                build_graph(graph, child)
+
+def visualize_tree(root):
+    graph = nx.DiGraph()
+    build_graph(graph, root)
+    
+    pos = nx.nx_agraph.graphviz_layout(graph, prog="dot")  # Hierarchical layout
+    labels = {node: node.bounds for node in graph.nodes}  # Display value and bounds
+    
+    node_colors = []
+    for node in graph.nodes:
+        if node == root:
+            node_colors.append("red")  # Root node color
+        elif not list(graph.successors(node)):
+            node_colors.append("green")  # Leaf nodes color
+        else:
+            node_colors.append("lightblue")  # Intermediate nodes color
+    
+    plt.figure(figsize=(8, 6))
+    nx.draw(graph, pos, with_labels=True, labels=labels, node_color=node_colors, edge_color='gray', node_size=2000, font_size=8, bbox=dict(facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"))
+    plt.show()
+
+
+visualize_tree(init_node)
