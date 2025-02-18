@@ -25,6 +25,7 @@ class Node:
         self.sol_obj_vars = None
         self.parent = None
         self.children = []
+        
 
     
         
