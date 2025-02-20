@@ -53,14 +53,18 @@ class BranchAndBound:
 # Handle infeasible sub sol
 # Add parent and child relation
 
-    def branch(self,node,res):
-        branch_var = np.argmax(np.abs(res.x) - np.floor(np.abs(res.x)))
+    def branch(self,node,x):
+        # need to remove non integer
+        # x = x[self.integer] 
+        diff = np.abs(x) - np.floor(np.abs(x))
+        diff = [val if isint else 0 for val,isint in zip(diff,self.integer)]
+        branch_var = np.argmax(diff)
 
         left_branch = deepcopy(node)
         right_branch = deepcopy(node)
 
-        left_branch["bounds"][branch_var] = (left_branch["bounds"][branch_var][0],floor(res.x[branch_var]))
-        right_branch["bounds"][branch_var] = (ceil(res.x[branch_var]),left_branch["bounds"][branch_var][1] )
+        left_branch["bounds"][branch_var] = (left_branch["bounds"][branch_var][0],floor(x[branch_var]))
+        right_branch["bounds"][branch_var] = (ceil(x[branch_var]),left_branch["bounds"][branch_var][1] )
 
         left_branch["parent"] = node
         right_branch["parent"] = node
@@ -71,33 +75,38 @@ class BranchAndBound:
        return all( [not(var.is_integer() ^ bool(i)) for var,i in zip(x,self.integer)])
 
 
-    def solve(self):
+    def solve(self,verbose = False):
         res = self.optimize_node(self.init_node)
         if not res.success:
             return None
         self.tree.append(self.init_node)
+        iter = 1
         if self.all_integer(res.x):
             print(res.x[0].is_integer())
             self.sol = res
             self.init_node["sol"] = res
             self.end_node = self.init_node
+            print(f"Number of nodes explored: {iter}")
+
+
             return self.sol
         
         sol_rounded = np.floor(res.x) # Does this work for negative solutions?
 
         ub = self.init_node["c"] @ sol_rounded
-        l,r = self.branch(self.init_node,res)
+        l,r = self.branch(self.init_node,res.x)
         self.queue.append(l)
         self.queue.append(r)
         self.init_node["children"].append(l)
         self.init_node["children"].append(r)
-
-
         while len(self.queue) > 0:
+            iter += 1
             node = self.queue.popleft()
             self.tree.append(node)
             res = self.optimize_node(node)
             node["sol"] = res
+            if verbose:
+                print(node)
 
             if not res.success:
                 print("infeasible")
@@ -116,6 +125,7 @@ class BranchAndBound:
                 self.queue.append(r)
                 node["children"].append(l)
                 node["children"].append(r)
+        if verbose:
+            print(f"Number of nodes explored: {iter}")
         return self.sol
-
 
