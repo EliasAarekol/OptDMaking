@@ -46,14 +46,19 @@ class Knapsack(Model):
         bounds.append((None,None))
 
         c = np.hstack((self.c,1))
+        # enforces has to take an action. here its removed temp
         A_eq = np.hstack((np.ones(self.n_desc_vars),0))
-        A_eq = np.atleast_2d(A_eq).T
+        A_eq = np.atleast_2d(A_eq)
+        A = np.vstack((A,A_eq))
+        b = np.hstack((b,1))
+        A_eq = None
         b_eq = 1
+        b_eq = None
         node = {
             "c" : c,
             "A_ub" : A,
             "b_ub" : b,
-            "A_eq" : A_eq.T,
+            "A_eq" : A_eq,
             "b_eq" :  b_eq,
             "bounds" : bounds,
             "integer" : integer,
@@ -82,7 +87,7 @@ class Knapsack(Model):
         return self.w
         
 
-c =- np.array([1,2,3,5,1])
+c =- np.array([1,2,2,5,1])
 w = np.array([2,3,1,4,1])
 a = np.array([
     [0.1,0.2,0.2,0.1,0.5],
@@ -126,3 +131,5 @@ dw,da,db = m.lagrange_gradient(x_t,duals)
 print("dw",dw)
 print("da",da)
 print("db",db)
+print(sol.fun)
+
