@@ -1,8 +1,8 @@
-from scipy.optimize import linprog
-from collections import deque
-import numpy as np
 from copy import copy,deepcopy
 from math import floor,ceil,inf
+from collections import deque
+from scipy.optimize import linprog
+import numpy as np
 
 
 
