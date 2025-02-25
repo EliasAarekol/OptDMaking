@@ -41,18 +41,15 @@ class KnapsackEnv(gym.Env):
         # pos or neg reward ?
         if np.any(self.state > 1):
             reward = - np.sum(self.c*action)
-            print("1",reward)
             terminated = True
         elif self.W_max < tot_weight:
             
             
             reward = tot_weight - self.W_max
-            print("2",reward)
             terminated = True
         else:
             
             reward = np.sum(self.c*action)
-            print("3",reward)
             
             terminated = False
         return self.state,reward,terminated,False,None
