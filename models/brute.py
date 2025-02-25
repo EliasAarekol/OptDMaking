@@ -95,7 +95,7 @@ class BruteForceMILP:
                     visited.add(neighbor_tuple)   
             
             if not res.success:
-                print("infeasible")
+                # print("infeasible")
                 continue
 
             if res.fun < best_value:

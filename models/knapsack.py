@@ -1,10 +1,10 @@
 # from models.model import Model
-from model import Model
+from models import model
 import numpy as np
 
-from bnb import BranchAndBound
-from brute import BruteForceMILP
-class Knapsack(Model):
+# from bnb import BranchAndBound
+# from brute import BruteForceMILP
+class Knapsack(model.Model):
     def __init__(
             self,
             c,
@@ -38,7 +38,7 @@ class Knapsack(Model):
         
         upper = -self.a @ self.B_t + self.b
         middle = 1 - self.B_t
-        lower = self.W_max - self.w @ B_t
+        lower = self.W_max - self.w @ self.B_t
         b = np.hstack((upper,middle,lower))
         integer = np.ones((self.n_desc_vars,1))
         integer = np.vstack((integer,0))
@@ -87,49 +87,49 @@ class Knapsack(Model):
         return self.w
         
 
-c =- np.array([1,2,2,5,1])
-w = np.array([2,3,1,4,1])
-a = np.array([
-    [0.1,0.2,0.2,0.1,0.5],
-    [0.3,0.4,0.1,0.3,0.2]
-    ])
-b = np.array([1,2])
-W_max = 10
-print(w.shape)
-B_t = np.array([0,0,0,1,0])
-m = Knapsack(c,w,a,b,W_max)
-m.update_state(B_t)
-node = m.get_LP_formulation()
+# c =- np.array([1,2,2,5,1])
+# w = np.array([2,3,1,4,1])
+# a = np.array([
+#     [0.1,0.2,0.2,0.1,0.5],
+#     [0.3,0.4,0.1,0.3,0.2]
+#     ])
+# b = np.array([1,2])
+# W_max = 10
+# print(w.shape)
+# B_t = np.array([0,0,0,1,0])
+# m = Knapsack(c,w,a,b,W_max)
+# m.update_state(B_t)
+# node = m.get_LP_formulation()
 
-# print(node)
-solver = BranchAndBound(node,None)
-sol = solver.solve(verbose = True)
-print(sol.x)
-x_t = sol.x[0:-1]
-print(x_t)
-print(sol.ineqlin.marginals)
-# dont need eqlin here but maybe good for interface superclass thingy
-print(sol.eqlin.marginals)
-duals = sol.ineqlin.marginals
-dw,da,db = m.lagrange_gradient(x_t,duals)
-print("dw",dw)
-print("da",da)
-print("db",db)
+# # print(node)
+# solver = BranchAndBound(node,None)
+# sol = solver.solve(verbose = True)
+# print(sol.x)
+# x_t = sol.x[0:-1]
+# print(x_t)
+# print(sol.ineqlin.marginals)
+# # dont need eqlin here but maybe good for interface superclass thingy
+# print(sol.eqlin.marginals)
+# duals = sol.ineqlin.marginals
+# dw,da,db = m.lagrange_gradient(x_t,duals)
+# print("dw",dw)
+# print("da",da)
+# print("db",db)
 
-solver = BruteForceMILP(node)
+# solver = BruteForceMILP(node)
 
-sol = solver.solve(verbose = True)
+# sol = solver.solve(verbose = True)
 
-print(sol.x)
-x_t = sol.x[0:-1]
-print(x_t)
-print(sol.ineqlin.marginals)
-# dont need eqlin here but maybe good for interface superclass thingy
-print(sol.eqlin.marginals)
-duals = sol.ineqlin.marginals
-dw,da,db = m.lagrange_gradient(x_t,duals)
-print("dw",dw)
-print("da",da)
-print("db",db)
-print(sol.fun)
+# print(sol.x)
+# x_t = sol.x[0:-1]
+# print(x_t)
+# print(sol.ineqlin.marginals)
+# # dont need eqlin here but maybe good for interface superclass thingy
+# print(sol.eqlin.marginals)
+# duals = sol.ineqlin.marginals
+# dw,da,db = m.lagrange_gradient(x_t,duals)
+# print("dw",dw)
+# print("da",da)
+# print("db",db)
+# print(sol.fun)
 
