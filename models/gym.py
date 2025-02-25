@@ -16,13 +16,15 @@ class KnapsackEnv(gym.Env):
         pass
     def reset(self,seed = None):
         super().reset(seed  = seed)
-
-        # self.state = self.observation_space.sample()
-        self.state = np.zeros((self.n_items,))
+        self.observation_space.seed(seed=seed)
+        self.state = self.observation_space.sample()
+        # self.state = np.zeros((self.n_items,))
 
         return self.state,None
     
     def step(self,action):
+        if not self.action_space.contains(action):
+            raise Exception("Action does not belong to action space")
         # Properly handle this
         self.state = action + self.state
         
@@ -38,8 +40,11 @@ class KnapsackEnv(gym.Env):
 
         weights = self.w + noise
         tot_weight = np.sum(self.state * weights)
+        
+        remaining_weight = self.W_max - tot_weight
+        
         # pos or neg reward ?
-        if np.any(self.state > 1):
+        if not self.observation_space.contains(self.state):
             reward = - np.sum(self.c*action)
             terminated = True
         elif self.W_max < tot_weight:
@@ -52,6 +57,11 @@ class KnapsackEnv(gym.Env):
             reward = np.sum(self.c*action)
             
             terminated = False
+            print(self.state)
+            if np.all(self.c*np.invert(self.state.astype(int)) >= remaining_weight):
+                terminated = True
+
+        
         return self.state,reward,terminated,False,None
     
     
@@ -64,5 +74,5 @@ class KnapsackEnv(gym.Env):
 # W_max = 10
 # action = np.array([1,0,0,0,0])
 # g = KnapsackEnv(c,w,W_max,0,0.1)
-# g.reset(0)
+# g.reset()
 # print(g.step(action))

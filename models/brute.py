@@ -21,6 +21,7 @@ class BruteForceMILP:
         self.sol = None
         self.end_node = None
         self.queue = deque()
+        self.pool = []
 
 
     def optimize_node(self,node):
@@ -58,7 +59,7 @@ class BruteForceMILP:
                 neighbors.append(x_new)
         return neighbors
 
-    def solve(self,max_iter = 10000,store_tree = False,verbose = False):
+    def solve(self,max_iter = 10000,store_pool = False,verbose = False):
         res = self.optimize_node(self.init_node)
         self.tree.append(self.init_node)
         if not res.success:
@@ -101,9 +102,13 @@ class BruteForceMILP:
             if res.fun < best_value:
                 self.sol = res
                 best_value = res.fun
+                
+            if store_pool:
+                self.pool.append(res)
+                
         if verbose:
             print(f"Number of nodes explored: {iter}")
-        return self.sol
+        return self.sol,self.pool
         
 
 

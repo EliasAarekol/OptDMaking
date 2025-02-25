@@ -5,11 +5,21 @@
  - Look at solvers structure, right now you need a new object for each node which sucks
  - Don't know if rewards from gym models should be positive or negative
  - Implement gym mode properly so that can use gymnasium.make
- - implement stochastic policy - need soluition pool
+ - <s> implement stochastic policy - need soluition pool </s>
  - solution pool for solvers
+ - <s> solution pool for brute </s>
  - implement advantage table
  - implement training
  - implement experience buffer
  - rethink and restructure solvers
- - proper seeding in gymnasium reset
+ - <s> proper seeding in gymnasium reset </s>
  - check intensity calculations (sanity check)
+ - What do we actually need to store from solvers
+    - solution
+    - marginals/dual solution
+    - obj_func
+ - Rewrite solvers to not be OOP
+ - Maybe wrap solvers into policy taker or something
+ - How to handle end of run, think right now its working
+ - L1 relaxation
+ - <s> terminate when no more possible </s>
