@@ -17,7 +17,13 @@ class KnapsackEnv(gym.Env):
     def reset(self,seed = None):
         super().reset(seed  = seed)
         self.observation_space.seed(seed=seed)
-        self.state = self.observation_space.sample()
+        self.state = self.observation_space.sample(mask = np.array([0,0,0,0,0],dtype=np.int8))
+        weights_left = self.w*(1-self.state.astype(int))
+        while np.all(self.state.astype(int)):
+            self.state = self.observation_space.sample()
+        print(self.state)
+
+  
         # self.state = np.zeros((self.n_items,))
 
         return self.state,None
@@ -26,6 +32,11 @@ class KnapsackEnv(gym.Env):
         if not self.action_space.contains(action):
             raise Exception("Action does not belong to action space")
         # Properly handle this
+
+        if self.state[0] == 1 and np.argmax(action) == 0:
+            print("whaaaat")
+            print(action)
+            print(self.state)
         self.state = action + self.state
         
         noise = np.random.normal(self.mean,self.std,self.n_items)
@@ -45,7 +56,7 @@ class KnapsackEnv(gym.Env):
         
         # pos or neg reward ?
         if not self.observation_space.contains(self.state):
-            reward = np.sum(self.c*action)
+            reward = -np.sum(self.c*action)
             terminated = True
         elif self.W_max < tot_weight:
             
@@ -54,13 +65,13 @@ class KnapsackEnv(gym.Env):
             terminated = True
         else:
             
-            reward = -np.sum(self.c*action)
+            reward = np.sum(self.c*action)
             
             terminated = False
             weights_left = self.w*(1-self.state.astype(int))
             if np.all(weights_left[weights_left != 0] >= remaining_weight):
                 terminated = True
-                print("terminated")
+                # print("terminated")
                 
         info = np.argmax(action)
         if reward == 0:

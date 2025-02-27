@@ -36,9 +36,13 @@ def q_update(q_table, rs , lr,df,actions,states,nxt_states):
         _type_: _description_
     """
     for r,action,state,nxt_state in zip(rs,actions,states,nxt_states):
-        print("reward",r)
-        print("q_update",q_table[action,state]  + lr*(r+df*np.max(q_table,axis=0)[nxt_state] - q_table[action,state]  ))
+        # print("reward",r)
+        # print("q_update",q_table[action,state]  + lr*(r+df*np.max(q_table,axis=0)[nxt_state] - q_table[action,state]  ))
         # print("reward",q_table)
+        if action == 0 and state == 30:
+            print("Wth")
+            print(nxt_state)
+            print(r)
         q_table[action,state] = q_table[action,state]  + lr*(r+df*np.max(q_table,axis=0)[nxt_state] - q_table[action,state]  )
     return q_table
     
