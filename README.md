@@ -8,7 +8,7 @@
  - <s> implement stochastic policy - need soluition pool </s>
  - solution pool for solvers
  - <s> solution pool for brute </s>
- - implement advantage table
+ - <s> implement advantage table </s>
  - implement training
  - implement experience buffer
  - rethink and restructure solvers
@@ -20,6 +20,10 @@
     - obj_func
  - Rewrite solvers to not be OOP
  - Maybe wrap solvers into policy taker or something
- - How to handle end of run, think right now its working
+ - <s> How to handle end of run, think right now its working</s>
  - L1 relaxation
  - <s> terminate when no more possible </s>
+ - Handle action encoding better, right now returned by gym model
+ - Handle no feasible solutions to problem solved by lp
+ - For some reason gives 0 reward sometimes, i think gym model doesnt work properly
+ 

@@ -2,6 +2,8 @@
 from models import brute,gym,knapsack,policy
 import numpy as np
 import numpy as np
+from models import q_table
+import random
 
 
 
@@ -34,7 +36,15 @@ def main():
     # Init adv table
 
 
-    training_iters = 10
+    training_iters = 10000
+    replay = []
+    train_every = 10
+    train_batch = 100
+    n_states = 2**5
+    n_actions = 5
+    # q = np.random.uniform(0,1,size = (n_actions,n_states))
+    q = np.zeros((n_actions,n_states))
+    print(q)
     # Set inital state
     print(gym_model.state)
     m.update_state(init_state)
@@ -44,7 +54,9 @@ def main():
         solver.solve(store_pool = True)
         pool = solver.pool
         obj_vals = np.array([sol.fun for sol in pool])
-        pol = policy.policy_dist(obj_vals,beta = 0.5)
+        pol = policy.policy_dist(obj_vals,beta = 0.1)
+        if len(pol) < 1:
+            continue
         action_i = categorical(pol)
         action = pool[action_i].x[0:-1]
         print("objvals",obj_vals)
@@ -52,14 +64,38 @@ def main():
         print("actio_i",action_i)
         # action = np.array(solver.sol.x[0:-1])
         print("action",action)
-        obs,reward,terminated,_,_ = gym_model.step(action)
+        cur_state = gym_model.state
+        obs,reward,terminated,_,action_number = gym_model.step(action)
         if terminated:
             obs,_ = gym_model.reset()
             print("terminated")
-            break
+            
         m.update_state(obs)
         
-        print(obs,reward)
+        exp = (reward,action_number,cur_state,obs)
+        replay.append(exp)
+        
+        if i % train_every:
+            for j in range(train_batch):
+                exp = random.choice(replay)
+                (reward,action_number,cur_state,obs) = exp
+                print("reward1",exp)
+                print("reward1",reward)
+                
+                # Apply q learning
+                # grad = ...
+                # adv = q_table.adv(q_table)
+                obs = obs.astype(int)
+                cur_state = cur_state.astype(int)
+                q = q_table.q_update(q,[reward],0.01,0.9,[action_number],[int(''.join(map(str, cur_state)), 2)],[int(''.join(map(str, obs)), 2)])
+                
+    print(np.argmax(q,axis = 0))
+    print(q)
+    print(q.shape)
+        
+        
+        
+        # print(obs,reward)
         
         
         # update model

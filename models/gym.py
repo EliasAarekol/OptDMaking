@@ -45,24 +45,29 @@ class KnapsackEnv(gym.Env):
         
         # pos or neg reward ?
         if not self.observation_space.contains(self.state):
-            reward = - np.sum(self.c*action)
+            reward = np.sum(self.c*action)
             terminated = True
         elif self.W_max < tot_weight:
             
             
-            reward = tot_weight - self.W_max
+            reward = -tot_weight + self.W_max
             terminated = True
         else:
             
-            reward = np.sum(self.c*action)
+            reward = -np.sum(self.c*action)
             
             terminated = False
-            print(self.state)
-            if np.all(self.c*np.invert(self.state.astype(int)) >= remaining_weight):
+            weights_left = self.w*(1-self.state.astype(int))
+            if np.all(weights_left[weights_left != 0] >= remaining_weight):
                 terminated = True
-
+                print("terminated")
+                
+        info = np.argmax(action)
+        if reward == 0:
+            print("self.state",self.state)
+            print("self.action",action)
         
-        return self.state,reward,terminated,False,None
+        return self.state,reward,terminated,False,info
     
     
 
