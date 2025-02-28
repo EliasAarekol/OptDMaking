@@ -3,14 +3,14 @@
 ### TODO
 
  - Look at solvers structure, right now you need a new object for each node which sucks
- - Don't know if rewards from gym models should be positive or negative
+ - <s> Don't know if rewards from gym models should be positive or negative </s>
  - Implement gym mode properly so that can use gymnasium.make
  - <s> implement stochastic policy - need soluition pool </s>
  - solution pool for solvers
  - <s> solution pool for brute </s>
  - <s> implement advantage table </s>
- - implement training
- - implement experience buffer
+ - <s> implement training</s>
+ - <s> implement experience buffer </s>
  - rethink and restructure solvers
  - <s> proper seeding in gymnasium reset </s>
  - check intensity calculations (sanity check)
@@ -27,3 +27,8 @@
  - Handle no feasible solutions to problem solved by lp
  - For some reason gives 0 reward sometimes, i think gym model doesnt work properly
  - Solve bruteforce with multiprocessing?
+ - Redefine step update, perhaps as a self defined function 
+ - Clean up gradient code
+ - Check convergence and size of Q table
+ - Look for PPO or similar for training inspiration
+ - Rewrite the brute force solver to be asynchronous

@@ -41,6 +41,16 @@ class KnapsackEnv(gym.Env):
         old_state = self.state_to_index(self.state)
         self.state = action + self.state
         new_state = self.state_to_index(self.state)
+        # if old_state == 7:
+        #     print(self.state)
+        #     print(action)
+        #     weights = self.w
+
+        #     tot_weight = np.sum(self.state * weights)
+        #     remaining_weight = self.W_max - tot_weight
+
+        #     print(remaining_weight)
+        #     print(  self.w*(1-self.state.astype(int)))
         
         noise = np.random.normal(self.mean,self.std,self.n_items)
 
@@ -57,6 +67,8 @@ class KnapsackEnv(gym.Env):
         
         remaining_weight = self.W_max - tot_weight
         
+        action_index = self.action_to_index(action)
+        
         # pos or neg reward ?
         if not self.observation_space.contains(self.state):
             reward = -np.sum(self.c*action)
@@ -65,6 +77,10 @@ class KnapsackEnv(gym.Env):
             
             
             reward = -tot_weight + self.W_max
+            terminated = True
+        elif action_index == len(action):
+            # print(self.state)
+            reward = 0
             terminated = True
         else:
             
@@ -76,7 +92,6 @@ class KnapsackEnv(gym.Env):
                 terminated = True
                 # print("terminated")
                 
-        action_index = self.action_to_index(action)
         
         info = {
             "action" : action_index,

@@ -140,7 +140,7 @@ class Knapsack(model.Model):
         w_lambda = eq_duals
         # print("hei",x_t.shape)
         # print(x_t,state)
-        dLdw = -w_lambda *(state + x_t)
+        dLdw = w_lambda *(state + x_t)
         dLda = []
         dLdb = []
         for i in range(self.n_value_pieces):

@@ -113,10 +113,124 @@ class BruteForceMILP:
 
 
 
+from scipy.optimize import linprog
+from copy import copy
+from multiprocessing import Manager, Queue, Lock
+from concurrent.futures import ProcessPoolExecutor, as_completed
+
+class BruteForceMILPPARA:
+    def __init__(self, init_node):
+        self.init_node = init_node
+        self.integer = self.init_node["integer"]
+        self.tree = []
+        self.sol = None
+        self.pool = []
+
+    def optimize_node(self, node):
+        return linprog(
+            node["c"], node["A_ub"], node["b_ub"], node["A_eq"],
+            node["b_eq"], node["bounds"]
+        )
+
+    def manhattan_round(self, x, int_indices):
+        """Find the closest integer solution by rounding the integer-constrained variables."""
+        x_int = x.copy()
+        for i, is_int in enumerate(int_indices):
+            if is_int:
+                x_int[i] = round(x[i])
+        return x_int
+
+    def generate_neighbors(self, x, is_integer, bounds):
+        """Generate neighboring integer solutions by varying each integer-constrained variable by ±1."""
+        neighbors = []
+        for i, is_int in enumerate(is_integer):
+            if is_int:
+                l_bound, r_bound = bounds[i]
+                l_bound = l_bound if l_bound is not None else -np.inf
+                r_bound = r_bound if r_bound is not None else np.inf
+
+                if x[i] + 1 <= r_bound:
+                    x_new = x.copy()
+                    x_new[i] += 1
+                    neighbors.append(x_new)
+
+                if x[i] - 1 >= l_bound:
+                    x_new = x.copy()
+                    x_new[i] -= 1
+                    neighbors.append(x_new)
+        return neighbors
+
+    def process_node(self, node_data):
+        """Worker function for optimizing a node."""
+        node, best_value, lock = node_data
+        res = self.optimize_node(node)
+        if res.success:
+            with lock:
+                if res.fun < best_value.value:
+                    best_value.value = res.fun
+                    return res
+        return None
+
+    def solve(self, max_iter=10000, store_pool=False, verbose=False):
+        res = self.optimize_node(self.init_node)
+        if not res.success:
+            return None
         
+        self.tree.append(self.init_node)
+        initial_guess = self.manhattan_round(res.x, self.integer)
+
+        # Shared variables for multiprocessing
+        manager = Manager()
+        queue = manager.Queue()
+        visited = manager.dict()  # Thread-safe dictionary
+        best_value = manager.Value('d', float('inf'))  # Shared best value
+        lock = manager.Lock()  # Lock for best value updates
+
+        queue.put(initial_guess)
+        visited[tuple(initial_guess)] = True
+
+        iter_count = 1
+        results = []
+
+        with ProcessPoolExecutor() as executor:
+            while not queue.empty() and iter_count <= max_iter:
+                iter_count += 1
+                x_fixed = queue.get()
+
+                new_bounds = self.init_node["bounds"].copy()
+                for i, is_int in enumerate(self.integer):
+                    if is_int:
+                        new_bounds[i] = (x_fixed[i], x_fixed[i])
+
+                node = copy(self.init_node)
+                node["bounds"] = new_bounds
+
+                # Submit node for parallel optimization
+                future = executor.submit(self.process_node, node)
+                results.append(future)
+
+                # Generate neighbors
+                neighbors = self.generate_neighbors(x_fixed, self.integer, self.init_node["bounds"])
+                for neighbor in neighbors:
+                    neighbor_tuple = tuple(neighbor)
+                    if neighbor_tuple not in visited:
+                        queue.put(neighbor)
+                        visited[neighbor_tuple] = True
+
+            for future in as_completed(results):
+                res,_,_ = future.result()
+                if res:
+                    self.sol = res
+                    if store_pool:
+                        self.pool.append(res)
+
+        if verbose:
+            print(f"Number of nodes explored: {iter_count}")
+
+        return self.sol, self.pool
         
-# values = np.array([10, 40, 30, 50])   # Item values
-# weights = np.array([5, 4, 6, 3])      # Item weights
+# values = np.array([1,2,2,5,1])
+# weights = np.array([2,3,1,4,1])     # Item weights
 # capacity = 10                       # Knapsack capacity
 
 # n = len(values)
@@ -140,8 +254,8 @@ class BruteForceMILP:
 #     "children" : [],
 #     "sol" : None
 # }
-# init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
+# # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
 # solver = BruteForceMILP(node)
-# solver.solve(verbose = True, max_iter = 100)
+# solver.solve(store_pool = False, verbose = False, max_iter = 100)
 # sol = solver.sol
 # print(sol)
