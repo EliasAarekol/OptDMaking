@@ -2,13 +2,12 @@ import numpy as np
 
 
 
-def state_advs(q_table,state):
+def adv(q_table):
     
     """
 
     Args:
         q_table (_type_): nxm matrix of n actions and m states
-        state (_type_): _description_
 
     Returns:
         _type_: Table of advantages for the given state
@@ -16,7 +15,7 @@ def state_advs(q_table,state):
     
     
     V_s = np.max(q_table,axis=0)
-    print(V_s)
+    # print(V_s)
     adv = q_table - V_s
     return adv
 
@@ -39,10 +38,10 @@ def q_update(q_table, rs , lr,df,actions,states,nxt_states):
         # print("reward",r)
         # print("q_update",q_table[action,state]  + lr*(r+df*np.max(q_table,axis=0)[nxt_state] - q_table[action,state]  ))
         # print("reward",q_table)
-        if action == 0 and state == 30:
-            print("Wth")
-            print(nxt_state)
-            print(r)
+        # if action == 0 and state == 30:
+        #     print("Wth")
+        #     print(nxt_state)
+        #     print(r)
         q_table[action,state] = q_table[action,state]  + lr*(r+df*np.max(q_table,axis=0)[nxt_state] - q_table[action,state]  )
     return q_table
     

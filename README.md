@@ -26,4 +26,4 @@
  - Handle action encoding better, right now returned by gym model
  - Handle no feasible solutions to problem solved by lp
  - For some reason gives 0 reward sometimes, i think gym model doesnt work properly
- 
+ - Solve bruteforce with multiprocessing?

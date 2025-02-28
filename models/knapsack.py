@@ -14,7 +14,7 @@ class Knapsack(model.Model):
             W_max,
             ):
         self.c = c # 1 x n_x
-        self.w = w # 1 x n_x
+        self.w = w.astype(float) # 1 x n_x
         self.a = a # n_V x n_x
         self.b = b # 1 x 1
         self.W_max = W_max
@@ -34,26 +34,36 @@ class Knapsack(model.Model):
         eye = np.eye(self.n_desc_vars)
         middle = np.hstack((eye,np.zeros((self.n_desc_vars,1))))
         lower = np.hstack((self.w,0))
-        A = np.vstack((upper,middle,lower))
+        A = np.vstack((upper,middle))
         
         upper = -self.a @ self.B_t + self.b
         middle = 1 - self.B_t
         lower = self.W_max - self.w @ self.B_t
-        b = np.hstack((upper,middle,lower))
+        b = np.hstack((upper,middle))
         integer = np.ones((self.n_desc_vars,1))
         integer = np.vstack((integer,0))
         bounds =  [(0, 1) for _ in range(self.n_desc_vars)]
         bounds.append((None,None))
+        bounds.append((None,None))
 
-        c = np.hstack((self.c,1))
+        c = np.hstack((self.c,1,1))
+        # print(c.shape)
         # enforces has to take an action. here its removed temp
         A_eq = np.hstack((np.ones(self.n_desc_vars),0))
         A_eq = np.atleast_2d(A_eq)
         A = np.vstack((A,A_eq))
         b = np.hstack((b,1))
-        A_eq = None
+        A = np.hstack((A,np.zeros((A.shape[0],1))))
+        lower = np.hstack((self.w,0))
+        
+        A_eq = lower
+        A_eq = np.hstack((A_eq,-1))
+        A_eq = np.atleast_2d(A_eq)
+        lower = self.W_max - self.w @ self.B_t
+
         b_eq = 1
-        b_eq = None
+        b_eq = lower
+        # print(A_eq.shape)
         node = {
             "c" : c,
             "A_ub" : A,
@@ -66,21 +76,82 @@ class Knapsack(model.Model):
             "children" : [],
             "sol" : None
         }
-        return node
+        return node 
+    
+    # def get_LP_formulation(self):
+    #     neg_ones = -1 * np.ones((self.n_value_pieces,1))
+    #     upper = np.hstack((self.a,neg_ones))
+    #     eye = np.eye(self.n_desc_vars)
+    #     middle = np.hstack((eye,np.zeros((self.n_desc_vars,1))))
+    #     lower = np.hstack((self.w,0))
+    #     A = np.vstack((upper,middle,lower))
+        
+    #     upper = -self.a @ self.B_t + self.b
+    #     middle = 1 - self.B_t
+    #     lower = self.W_max - self.w @ self.B_t
+    #     b = np.hstack((upper,middle,lower))
+    #     integer = np.ones((self.n_desc_vars,1))
+    #     integer = np.vstack((integer,0))
+    #     bounds =  [(0, 1) for _ in range(self.n_desc_vars)]
+    #     bounds.append((None,None))
+
+    #     c = np.hstack((self.c,1))
+    #     # enforces has to take an action. here its removed temp
+    #     A_eq = np.hstack((np.ones(self.n_desc_vars),0))
+    #     A_eq = np.atleast_2d(A_eq)
+    #     A = np.vstack((A,A_eq))
+    #     b = np.hstack((b,1))
+    #     A_eq = None
+    #     b_eq = 1
+    #     b_eq = None
+    #     node = {
+    #         "c" : c,
+    #         "A_ub" : A,
+    #         "b_ub" : b,
+    #         "A_eq" : A_eq,
+    #         "b_eq" :  b_eq,
+    #         "bounds" : bounds,
+    #         "integer" : integer,
+    #         "parent" : None,
+    #         "children" : [],
+    #         "sol" : None
+    #     }
+    #     return node
     
     # Highly unlikely that this works properly
-    def lagrange_gradient(self,x_t,ineq_duals):
+    # def lagrange_gradient(self,x_t,state,ineq_duals):
+    #     # This doesnt work with experience replay
+    #     w_lambda = ineq_duals[-2]
+    #     dLdw = w_lambda *(state + x_t)
+    #     dLda = []
+    #     dLdb = []
+    #     for i in range(self.n_value_pieces):
+    #         dLda.append(-ineq_duals[i]*(state + x_t))
+    #         dLdb.append(-ineq_duals[i])
+    #     dLda = np.array(dLda).flatten()
+    #     dLdb = np.array(dLdb).flatten()
+    #     # print(dLda)
+    #     res = np.concat((dLdw,dLda,dLdb))
+    #     # return dLdw,dLda,dLdb
+    #     return res
+    def lagrange_gradient(self,x_t,state,eq_duals,ineq_duals):
         # This doesnt work with experience replay
-        w_lambda = ineq_duals[-1]
-        dLdw = w_lambda *(self.B_t + x_t)
+        # w_lambda = ineq_duals[-2]
+        w_lambda = eq_duals
+        # print("hei",x_t.shape)
+        # print(x_t,state)
+        dLdw = -w_lambda *(state + x_t)
         dLda = []
         dLdb = []
         for i in range(self.n_value_pieces):
-            dLda.append(-ineq_duals[i]*(self.B_t + x_t))
-            dLdb.append(-ineq_duals[i])
-        dLda = np.array(dLda)
-        dLdb = np.array(dLdb)
-        return dLdw,dLda,dLdb
+            dLda.append(ineq_duals[i]*(state + x_t))
+            dLdb.append(ineq_duals[i])
+        dLda = np.array(dLda).flatten()
+        dLdb = np.array(dLdb).flatten()
+        # print(dLda)
+        res = np.concat((dLdw,dLda,dLdb))
+        # return dLdw,dLda,dLdb
+        return res
 
 
     def get_params(self):

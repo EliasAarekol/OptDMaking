@@ -4,7 +4,7 @@ class KnapsackEnv(gym.Env):
 
     def __init__(self,c,w,W_max,mean,std):
         self.c = c
-        self.w = w 
+        self.w = w
         self.W_max = W_max
         self.n_items = len(w)
         self.observation_space = gym.spaces.MultiBinary(self.n_items)
@@ -21,7 +21,7 @@ class KnapsackEnv(gym.Env):
         weights_left = self.w*(1-self.state.astype(int))
         while np.all(self.state.astype(int)):
             self.state = self.observation_space.sample()
-        print(self.state)
+        # print(self.state)
 
   
         # self.state = np.zeros((self.n_items,))
@@ -33,11 +33,14 @@ class KnapsackEnv(gym.Env):
             raise Exception("Action does not belong to action space")
         # Properly handle this
 
-        if self.state[0] == 1 and np.argmax(action) == 0:
-            print("whaaaat")
-            print(action)
-            print(self.state)
+        # if self.state[0] == 1 and np.argmax(action) == 0:
+        #     print("whaaaat")
+        #     print(action)
+        #     print(self.state)
+            
+        old_state = self.state_to_index(self.state)
         self.state = action + self.state
+        new_state = self.state_to_index(self.state)
         
         noise = np.random.normal(self.mean,self.std,self.n_items)
 
@@ -73,12 +76,27 @@ class KnapsackEnv(gym.Env):
                 terminated = True
                 # print("terminated")
                 
-        info = np.argmax(action)
-        if reward == 0:
-            print("self.state",self.state)
-            print("self.action",action)
+        action_index = self.action_to_index(action)
+        
+        info = {
+            "action" : action_index,
+            "old_state" : old_state,
+            "new_state" : new_state
+        }
+        
+        # if reward == 0:
+        #     print("self.state",self.state)
+        #     print("self.action",action)
         
         return self.state,reward,terminated,False,info
+    
+    def action_to_index(self, action):
+        if np.sum(action) == 0:
+            return len(action)
+        else:
+            return np.argmax(action)
+    def state_to_index(self,state):
+        return int(''.join(map(str, state.astype(int))), 2)
     
     
 
