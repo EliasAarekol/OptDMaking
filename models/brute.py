@@ -3,7 +3,9 @@ from math import floor,ceil,inf
 from collections import deque
 from scipy.optimize import linprog
 import numpy as np
-
+from multiprocessing import Pool,Process
+from threading import Thread
+import time 
 
 
 # BFS brute force search for MILP solutions
@@ -228,34 +230,152 @@ class BruteForceMILPPARA:
             print(f"Number of nodes explored: {iter_count}")
 
         return self.sol, self.pool
+    
+def optimize_node(node):
+    return linprog(
+        node["c"],
+        node["A_ub"],
+        node["b_ub"],
+        node["A_eq"],
+        node["b_eq"],
+        node["bounds"],
+        )
+def optimize_node_para(node,results,index):
+    res =  linprog(
+        node["c"],
+        node["A_ub"],
+        node["b_ub"],
+        node["A_eq"],
+        node["b_eq"],
+        node["bounds"],
+        )
+    results[index] = res
+
+def manhattan_round(x, int_indices):
+    """Find the closest integer solution by rounding the integer-constrained variables."""
+    x_int = x.copy()
+    for i, is_int in enumerate(int_indices):
+        if is_int:
+            x_int[i] = round(x[i])
+    return x_int
+
+def generate_neighbors(x, is_integer,bounds):
+    # Needs to handle that the original bounds shouldnt be breached
+    """Generate neighboring integer solutions by varying each integer-constrained variable by ±1."""
+    neighbors = []
+    for i, is_int in enumerate(is_integer):
+        if is_int:
+            l_bound,r_bound = bounds[i]
+            l_bound = l_bound if l_bound is not None else -inf
+            r_bound = r_bound if r_bound is not None else inf
+            x_new = x.copy()
+            x_new[i] = min(x[i] + 1,r_bound)
+            neighbors.append(x_new)
+            x_new = x.copy()
+            x_new[i] = max(x[i] - 1,l_bound)
+            neighbors.append(x_new)
+    return neighbors
+def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
+    integer = node["integer"]
+    pool = []
+    queue = deque()
+    res = optimize_node(node)
+    pool.append(node)
+    if not res.success:
+        return None
+
+    initial_guess = manhattan_round(res.x, integer)
+    queue.append(initial_guess)
+    visited = set()
+    visited.add(tuple(initial_guess))
+    visited = set()
+    visited.add(tuple(initial_guess))
+    iter = 1
+    best_value = float('inf')
+    orig_node = node
+    orig_bounds = node["bounds"].copy()
+    while len(queue) > 0 and  iter <= max_iter:
+        iter += 1
+
+        x_fixed = queue.popleft()
+        new_bounds = orig_bounds.copy()
+        for i, is_int in enumerate(integer):
+            if is_int:
+                new_bounds[i] = (x_fixed[i], x_fixed[i])
+        node = copy(orig_node)
+        node["bounds"] = new_bounds
+        pool.append(node)
+        for neighbor in generate_neighbors(x_fixed, integer,orig_node["bounds"]):
+            neighbor_tuple = tuple(neighbor)
+            if neighbor_tuple not in visited:
+                queue.append(neighbor)
+                visited.add(neighbor_tuple)
+    # with Pool(8) as p:
+    #     res = p.map(optimize_node,pool)
+    # print(res)
+    jobs = []
+    results = [None for p in pool]
+    index = 0
+    # for node,res in zip(pool,results):
+    #     # print(node)
+    #     process = Process(target = optimize_node_para,args = (node,results,index))
+    #     jobs.append(process)
+    #     index += 1
+    pool = [deepcopy(prob) for prob in pool]
+    with Pool() as p:
+        results = p.map(optimize_node,pool)
+        # for node,res in zip(pool,results):
+        #     ret = p.apply_async(optimize_node,node)
+        #     res =ret.get(timeout = 1)
+        #     index += 1
+        #     break
         
-# values = np.array([1,2,2,5,1])
-# weights = np.array([2,3,1,4,1])     # Item weights
-# capacity = 10                       # Knapsack capacity
+    # for j in jobs:
+    #     j.start()
 
-# n = len(values)
+    # # Ensure all of the processes have finished
+    # for j in jobs:
+    #     j.join()
+    return results
+       
 
-# # Define the linear programming matrices
-# c = -values   # Maximize -> minimize negative value
-# A = [weights]  # Single inequality constraint for total weight
-# b = [capacity] # Knapsack capacity
-# bounds = [(0, 1) for _ in range(n)]  # Relaxed 0-1 constraint
-# integer  = [1,1,1,1]
+if __name__ == "__main__":
+            
+    values = np.array([1,2,2,5,1,1,1,1,1,1,1])
+    weights = np.array([2,3,1,4,1,1,1,1,1,1,1])     # Item weights
+    capacity = 10                       # Knapsack capacity
 
-# node = {
-#     "c" : c,
-#     "A_ub" : A,
-#     "b_ub" : b,
-#     "A_eq" : None,
-#     "b_eq" :  None,
-#     "bounds" : bounds,
-#     "integer" : integer,
-#     "parent" : None,
-#     "children" : [],
-#     "sol" : None
-# }
-# # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
-# solver = BruteForceMILP(node)
-# solver.solve(store_pool = False, verbose = False, max_iter = 100)
-# sol = solver.sol
-# print(sol)
+    n = len(values)
+
+    # Define the linear programming matrices
+    c = -values   # Maximize -> minimize negative value
+    A = [weights]  # Single inequality constraint for total weight
+    b = [capacity] # Knapsack capacity
+    bounds = [(0, 1) for _ in range(n)]  # Relaxed 0-1 constraint
+    integer  = [1,1,1,1]
+
+    node = {
+        "c" : c,
+        "A_ub" : A,
+        "b_ub" : b,
+        "A_eq" : None,
+        "b_eq" :  None,
+        "bounds" : bounds,
+        "integer" : integer,
+        "parent" : None,
+        "children" : [],
+        "sol" : None
+    }
+    # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
+    start = time.time()
+    sol = bruteForceSolveMILP(node)
+    print(len(sol))
+    print(time.time()-start)
+    start = time.time()
+    solver = BruteForceMILP(node)
+    _,sol = solver.solve(store_pool = True ,verbose = False, max_iter = 100)
+    print(time.time()-start)
+    print(len(sol))
+    
+    # sol = solver.sol
+    # print(sol)
