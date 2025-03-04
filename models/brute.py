@@ -4,8 +4,10 @@ from collections import deque
 from scipy.optimize import linprog
 import numpy as np
 from multiprocessing import Pool,Process
+from multiprocessing.sharedctypes import Array
 from threading import Thread
-import time 
+import time
+import cProfile
 
 
 # BFS brute force search for MILP solutions
@@ -240,6 +242,15 @@ def optimize_node(node):
         node["b_eq"],
         node["bounds"],
         )
+def optimize_node2(c,A_ub,b_ub,bounds):
+    return linprog(
+        c,
+        A_ub,
+        b_ub,
+        None,
+        None,
+        bounds
+        )
 def optimize_node_para(node,results,index):
     res =  linprog(
         node["c"],
@@ -275,6 +286,12 @@ def generate_neighbors(x, is_integer,bounds):
             x_new[i] = max(x[i] - 1,l_bound)
             neighbors.append(x_new)
     return neighbors
+def worker_function(c_arr, A_ub_arr, b_ub_arr, bounds):
+    c_local = np.frombuffer(c_arr, dtype=np.float64)  # Convert back to NumPy
+    A_ub_local = np.frombuffer(A_ub_arr, dtype=np.float64)
+    b_ub_local = np.frombuffer(b_ub_arr, dtype=np.float64)
+    
+    return optimize_node2(c_local, A_ub_local, b_ub_local, bounds)
 def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
     integer = node["integer"]
     pool = []
@@ -320,15 +337,54 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
     #     # print(node)
     #     process = Process(target = optimize_node_para,args = (node,results,index))
     #     jobs.append(process)
-    #     index += 1
-    pool = [deepcopy(prob) for prob in pool]
+    # #     index += 1
+    # pool = [deepcopy(prob) for prob in pool]
+
+
+    # c = orig_node["c"]
+    # c_array = Array("d", len(c.flatten()), lock=False)
+    # c_array[:] = c.flatten()[:]
+
+    # A_ub = orig_node["A_ub"]
+    # A_ub_array = Array("d", len(A_ub.flatten()), lock=False)
+    # A_ub_array[:] = A_ub.flatten()[:]
+
+    # b_ub = orig_node["b_ub"]
+    # b_ub_array = Array("d", len(b_ub.flatten()), lock=False)
+    # b_ub_array[:] = b_ub.flatten()[:]
+
+    # A_eq = orig_node["A_eq"]
+    # A_eq_array = None if A_eq is None else Array("d", len(A_eq.flatten()), lock=False)
+    # if A_eq_array is not None:
+    #     A_eq_array[:] = A_eq.flatten()[:]
+
+    # b_eq = orig_node["b_eq"]
+    # b_eq_array = None if b_eq is None else Array("d", len(b_eq.flatten()), lock=False)
+    # if b_eq_array is not None:
+    #     b_eq_array[:] = b_eq.flatten()[:]
+
+    # c = orig_node["c"].flatten()
+    # c_array = Array("d", c, lock=False)  # No lock for better performance
+
+    # A_ub = orig_node["A_ub"].flatten()
+    # A_ub_array = Array("d", A_ub, lock=False)
+
+    # b_ub = orig_node["b_ub"].flatten()
+    # b_ub_array = Array("d", b_ub, lock=False)
+
+    # bounds = orig_node["bounds"]
+    # bounds_array = Array("d", len(bounds.flatten()), lock=False)
+    # bounds_array[:] = bounds.flatten()[:]
+    c_list = orig_node["c"]
+    A_ub_list = orig_node["A_ub"]
+    b_ub_list = orig_node["b_ub"]
+    bounds_list = list(orig_node["bounds"])
+
+    inputs = [(c_list, A_ub_list, b_ub_list, node["bounds"]) for node in pool]
+
     with Pool() as p:
-        results = p.map(optimize_node,pool)
-        # for node,res in zip(pool,results):
-        #     ret = p.apply_async(optimize_node,node)
-        #     res =ret.get(timeout = 1)
-        #     index += 1
-        #     break
+        results = p.starmap(optimize_node2, inputs)
+            #     break
         
     # for j in jobs:
     #     j.start()
@@ -337,10 +393,9 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
     # for j in jobs:
     #     j.join()
     return results
-       
 
-if __name__ == "__main__":
-            
+def main():
+                
     values = np.array([1,2,2,5,1,1,1,1,1,1,1])
     weights = np.array([2,3,1,4,1,1,1,1,1,1,1])     # Item weights
     capacity = 10                       # Knapsack capacity
@@ -349,8 +404,8 @@ if __name__ == "__main__":
 
     # Define the linear programming matrices
     c = -values   # Maximize -> minimize negative value
-    A = [weights]  # Single inequality constraint for total weight
-    b = [capacity] # Knapsack capacity
+    A = np.array([weights])  # Single inequality constraint for total weight
+    b = np.array([capacity]) # Knapsack capacity
     bounds = [(0, 1) for _ in range(n)]  # Relaxed 0-1 constraint
     integer  = [1,1,1,1]
 
@@ -369,13 +424,16 @@ if __name__ == "__main__":
     # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
     start = time.time()
     sol = bruteForceSolveMILP(node)
-    print(len(sol))
-    print(time.time()-start)
-    start = time.time()
-    solver = BruteForceMILP(node)
-    _,sol = solver.solve(store_pool = True ,verbose = False, max_iter = 100)
-    print(time.time()-start)
-    print(len(sol))
+    # print(time.time()-start)
+    # print(len(sol))
+    # start = time.time()
+    # solver = BruteForceMILP(node)
+    # _,sol = solver.solve(store_pool = True ,verbose = False, max_iter = 100)
+    # print(time.time()-start)
+    # print(len(sol))
     
     # sol = solver.sol
     # print(sol)
+
+if __name__ == "__main__":
+    cProfile.run("main()",sort = "time")
