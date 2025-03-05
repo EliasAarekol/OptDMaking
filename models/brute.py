@@ -359,7 +359,7 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False,pro
     indexes = [i for i in range(len(pool))]
     with Pool(processes,process_init,[c,A_ub,b_ub,A_eq,b_eq,bounds_list]) as p:
         results = p.map(optimize_node3, indexes)
-
+    results = [res for res in results if res.success]
     return results
 
 def main():

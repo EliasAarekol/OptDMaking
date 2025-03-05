@@ -70,9 +70,10 @@ def main():
         start = time.time()
         node = m.get_LP_formulation()
         # solver = brute.BruteForceMILP(node)
-        # solver.solve(store_pool = True,verbose = True)
-        pool = brute.bruteForceSolveMILP(node,processes=8)
+        # solver.solve(store_pool = True,verbose = False)
+        pool = brute.bruteForceSolveMILP(node,processes=4)
         print(time.time()-start)
+        print(pool)
         break
         pool = solver.pool
         obj_vals = np.array([sol.fun for sol in pool])
@@ -139,10 +140,10 @@ def main():
             m.b[1] -= 0.01*pol_grad[16]
             replay = []
     # print(ep_rewards)
-    plt.plot(range(len(ep_rewards)),ep_rewards)
-    plt.show()
-    # print(q)
-    print(m.w)
+    # plt.plot(range(len(ep_rewards)),ep_rewards)
+    # plt.show()
+    # # print(q)
+    # print(m.w)
     # print(m.a)
     # print(m.b)
 
