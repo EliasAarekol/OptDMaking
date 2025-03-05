@@ -69,10 +69,10 @@ def main():
         # Extract action
         start = time.time()
         node = m.get_LP_formulation()
-        solver = brute.BruteForceMILPPARA(node)
+        solver = brute.BruteForceMILP(node)
         solver.solve(store_pool = True,verbose = True)
         print(time.time()-start)
-
+        break
         pool = solver.pool
         obj_vals = np.array([sol.fun for sol in pool])
         pol = policy.policy_dist(obj_vals,beta = 0.5)

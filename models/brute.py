@@ -1,12 +1,11 @@
-from copy import copy,deepcopy
-from math import floor,ceil,inf
+from copy import copy
+from math import inf
 from collections import deque
 # from scipy.optimize import linprog
 import numpy as np
-from multiprocessing import Pool,Process
-from multiprocessing.sharedctypes import Array
-from threading import Thread
-import time
+from multiprocessing import Pool
+# from threading import Thread
+# import time
 import cProfile
 import scipy
 from pstats import Stats
@@ -31,7 +30,7 @@ class BruteForceMILP:
 
 
     def optimize_node(self,node):
-        return linprog(
+        return scipy.optimize.linprog(
             node["c"],
             node["A_ub"],
             node["b_ub"],
@@ -252,20 +251,20 @@ def optimize_node2(c,A_ub,b_ub,bounds):
     
 def optimize_node3(i):
     bound = bounds[i]
-    c_c= copy(c)
-    print(c_c)
-    c_c+=1
+    # c_c= copy(c)
+    # print(c_c)
+    # c_c+=1
     # print(a)
-    # return scipy.optimize.linprog(
-    #     c,
-    #     A_ub,
-    #     b_ub,
-    #     None,
-    #     None,
-    #     bound,
-    #     options={"threads": 1}
-    #     )
-    # print(A_ub)
+    return scipy.optimize.linprog(
+        c,
+        A_ub,
+        b_ub,
+        None,
+        None,
+        bound,
+        # options={"threads": 1}
+        )
+    print(A_ub)
     return
     
 
@@ -413,15 +412,16 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
     # inputs = [(c_list, A_ub_list, b_ub_list, node["bounds"]) for node in pool]
     indexes = [i for i in range(len(pool))]
     print(len(indexes))
-    with Pool(8,process_init,[c_list,A_ub_list,b_ub_list,bounds_list]) as p:
+    with Pool(4,process_init,[c_list,A_ub_list,b_ub_list,bounds_list]) as p:
         results = p.map(optimize_node3, indexes)
 
     return results
 
 def main():
-                
-    values = np.array([1,2,2,5,1,1,1,1,1,1,1])
-    weights = np.array([2,3,1,4,1,1,1,1,1,1,1])     # Item weights
+    values = np.array([1,2,2,5,1])
+    weights = np.array([2,3,1,4,1])
+    # values = np.array([1,2,2,5,1,1,1,1,1,1,1])
+    # weights = np.array([2,3,1,4,1,1,1,1,1,1,1])     # Item weights
     capacity = 10                       # Knapsack capacity
 
     n = len(values)
@@ -431,7 +431,8 @@ def main():
     A = np.array([weights])  # Single inequality constraint for total weight
     b = np.array([capacity]) # Knapsack capacity
     bounds = [(0, 1) for _ in range(n)]  # Relaxed 0-1 constraint
-    integer  = [1,1,1,1,1,1,1,1,1,1,1]
+    # integer  = [1,1,1,1,1,1,1,1,1,1,1]
+    integer  = [1,1,1,1,1]
 
     node = {
         "c" : c,
@@ -447,12 +448,12 @@ def main():
     }
     # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
     # start = time.time()
-    sol = bruteForceSolveMILP(node)
+    sol = bruteForceSolveMILP(node,max_iter = 10000)
     # # print(time.time()-start)
     # print(sol)
     # start = time.time()
     # solver = BruteForceMILP(node)
-    # _,sol = solver.solve(store_pool = True ,verbose = False, max_iter = 100)
+    # _,sol = solver.solve(store_pool = True ,verbose = False, max_iter = 10000)
     # print(time.time()-start)
     # print(len(sol))
     
@@ -465,5 +466,5 @@ if __name__ == "__main__":
     main()
     pr.disable()
     stats = Stats(pr)
-    stats.sort_stats('tottime').print_stats(20)
+    stats.sort_stats('cumtime').print_stats(200)
     # cProfile.run("main()",sort = "time")
