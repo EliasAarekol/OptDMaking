@@ -251,21 +251,15 @@ def optimize_node2(c,A_ub,b_ub,bounds):
     
 def optimize_node3(i):
     bound = bounds[i]
-    # c_c= copy(c)
-    # print(c_c)
-    # c_c+=1
-    # print(a)
     return scipy.optimize.linprog(
         c,
         A_ub,
         b_ub,
-        None,
-        None,
+        A_eq,
+        b_eq,
         bound,
         # options={"threads": 1}
         )
-    print(A_ub)
-    return
     
 
 def optimize_node_para(node,results,index):
@@ -310,17 +304,16 @@ def worker_function(c_arr, A_ub_arr, b_ub_arr, bounds):
     
     return optimize_node2(c_local, A_ub_local, b_ub_local, bounds)
 
-def process_init(c_i,A_ub_i,b_ub_i,bounds_list):
-    global c 
-    global A_ub
-    global b_ub 
-    global bounds
+def process_init(c_i,A_ub_i,b_ub_i,A_eq_i,b_eq_i,bounds_list):
+    global c, A_ub,b_ub,A_eq,b_eq,bounds 
     c = c_i
     A_ub = A_ub_i
     b_ub = b_ub_i
+    A_eq =A_eq_i
+    b_eq =b_eq_i
     bounds = bounds_list
     
-def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
+def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False,processes = None):
     integer = node["integer"]
     pool = []
     queue = deque()
@@ -355,64 +348,16 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
             if neighbor_tuple not in visited:
                 queue.append(neighbor)
                 visited.add(neighbor_tuple)
-    # with Pool(8) as p:
-    #     res = p.map(optimize_node,pool)
-    # print(res)
-    jobs = []
-    results = [None for p in pool]
-    index = 0
-    # for node,res in zip(pool,results):
-    #     # print(node)
-    #     process = Process(target = optimize_node_para,args = (node,results,index))
-    #     jobs.append(process)
-    # #     index += 1
-    # pool = [deepcopy(prob) for prob in pool]
-
-
-    # c = orig_node["c"]
-    # c_array = Array("d", len(c.flatten()), lock=False)
-    # c_array[:] = c.flatten()[:]
-
-    # A_ub = orig_node["A_ub"]
-    # A_ub_array = Array("d", len(A_ub.flatten()), lock=False)
-    # A_ub_array[:] = A_ub.flatten()[:]
-
-    # b_ub = orig_node["b_ub"]
-    # b_ub_array = Array("d", len(b_ub.flatten()), lock=False)
-    # b_ub_array[:] = b_ub.flatten()[:]
-
-    # A_eq = orig_node["A_eq"]
-    # A_eq_array = None if A_eq is None else Array("d", len(A_eq.flatten()), lock=False)
-    # if A_eq_array is not None:
-    #     A_eq_array[:] = A_eq.flatten()[:]
-
-    # b_eq = orig_node["b_eq"]
-    # b_eq_array = None if b_eq is None else Array("d", len(b_eq.flatten()), lock=False)
-    # if b_eq_array is not None:
-    #     b_eq_array[:] = b_eq.flatten()[:]
-
-    # c = orig_node["c"].flatten()
-    # c_array = Array("d", c, lock=False)  # No lock for better performance
-
-    # A_ub = orig_node["A_ub"].flatten()
-    # A_ub_array = Array("d", A_ub, lock=False)
-
-    # b_ub = orig_node["b_ub"].flatten()
-    # b_ub_array = Array("d", b_ub, lock=False)
-
-    # bounds = orig_node["bounds"]
-    # bounds_array = Array("d", len(bounds.flatten()), lock=False)
-    # bounds_array[:] = bounds.flatten()[:]
-    c_list = orig_node["c"]
-    A_ub_list = orig_node["A_ub"]
-    b_ub_list = orig_node["b_ub"]
-    # bounds_list = list(orig_node["bounds"])
+  
+    c = orig_node["c"]
+    A_ub = orig_node["A_ub"]
+    b_ub = orig_node["b_ub"]
+    A_eq = orig_node["A_eq"]
+    b_eq = orig_node["b_eq"]
     bounds_list = [node["bounds"] for node in pool]
 
-    # inputs = [(c_list, A_ub_list, b_ub_list, node["bounds"]) for node in pool]
     indexes = [i for i in range(len(pool))]
-    print(len(indexes))
-    with Pool(4,process_init,[c_list,A_ub_list,b_ub_list,bounds_list]) as p:
+    with Pool(processes,process_init,[c,A_ub,b_ub,A_eq,b_eq,bounds_list]) as p:
         results = p.map(optimize_node3, indexes)
 
     return results
@@ -449,6 +394,7 @@ def main():
     # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
     # start = time.time()
     sol = bruteForceSolveMILP(node,max_iter = 10000)
+    # print(sol)
     # # print(time.time()-start)
     # print(sol)
     # start = time.time()
@@ -466,5 +412,5 @@ if __name__ == "__main__":
     main()
     pr.disable()
     stats = Stats(pr)
-    stats.sort_stats('cumtime').print_stats(200)
+    stats.sort_stats('time').print_stats(20)
     # cProfile.run("main()",sort = "time")

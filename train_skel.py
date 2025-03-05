@@ -69,8 +69,9 @@ def main():
         # Extract action
         start = time.time()
         node = m.get_LP_formulation()
-        solver = brute.BruteForceMILP(node)
-        solver.solve(store_pool = True,verbose = True)
+        # solver = brute.BruteForceMILP(node)
+        # solver.solve(store_pool = True,verbose = True)
+        pool = brute.bruteForceSolveMILP(node,processes=8)
         print(time.time()-start)
         break
         pool = solver.pool
