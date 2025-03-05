@@ -3,7 +3,8 @@ from multiprocessing import Pool
 
 # import time
 import cProfile
-from scipy.optimize import linprog
+# from scipy.optimize import linprog
+# import scipy
 
 
 # def optimize_node2(c,A_ub,b_ub,bounds):
@@ -148,8 +149,6 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
     # b_ub_list = orig_node["b_ub"]
     # bounds_list = list(orig_node["bounds"])
 
-    import os
-    os.environ["OMP_NUM_THREADS"] = "1"
     # inputs = [(deepcopy(c_list), deepcopy(A_ub_list), deepcopy(b_ub_list), deepcopy(node["bounds"])) for node in pool]
     inputs = [0 for n in range(1000)]
     with Pool() as p:

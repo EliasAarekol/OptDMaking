@@ -1,13 +1,15 @@
 from copy import copy,deepcopy
 from math import floor,ceil,inf
 from collections import deque
-from scipy.optimize import linprog
+# from scipy.optimize import linprog
 import numpy as np
 from multiprocessing import Pool,Process
 from multiprocessing.sharedctypes import Array
 from threading import Thread
 import time
 import cProfile
+import scipy
+from pstats import Stats
 
 
 # BFS brute force search for MILP solutions
@@ -116,11 +118,6 @@ class BruteForceMILP:
         
 
 
-
-from scipy.optimize import linprog
-from copy import copy
-from multiprocessing import Manager, Queue, Lock
-from concurrent.futures import ProcessPoolExecutor, as_completed
 
 class BruteForceMILPPARA:
     def __init__(self, init_node):
@@ -234,7 +231,7 @@ class BruteForceMILPPARA:
         return self.sol, self.pool
     
 def optimize_node(node):
-    return linprog(
+    return scipy.optimize.linprog(
         node["c"],
         node["A_ub"],
         node["b_ub"],
@@ -243,7 +240,7 @@ def optimize_node(node):
         node["bounds"],
         )
 def optimize_node2(c,A_ub,b_ub,bounds):
-    return linprog(
+    return scipy.optimize.linprog(
         c,
         A_ub,
         b_ub,
@@ -251,6 +248,27 @@ def optimize_node2(c,A_ub,b_ub,bounds):
         None,
         bounds
         )
+    
+    
+def optimize_node3(i):
+    bound = bounds[i]
+    c_c= copy(c)
+    print(c_c)
+    c_c+=1
+    # print(a)
+    # return scipy.optimize.linprog(
+    #     c,
+    #     A_ub,
+    #     b_ub,
+    #     None,
+    #     None,
+    #     bound,
+    #     options={"threads": 1}
+    #     )
+    # print(A_ub)
+    return
+    
+
 def optimize_node_para(node,results,index):
     res =  linprog(
         node["c"],
@@ -292,6 +310,17 @@ def worker_function(c_arr, A_ub_arr, b_ub_arr, bounds):
     b_ub_local = np.frombuffer(b_ub_arr, dtype=np.float64)
     
     return optimize_node2(c_local, A_ub_local, b_ub_local, bounds)
+
+def process_init(c_i,A_ub_i,b_ub_i,bounds_list):
+    global c 
+    global A_ub
+    global b_ub 
+    global bounds
+    c = c_i
+    A_ub = A_ub_i
+    b_ub = b_ub_i
+    bounds = bounds_list
+    
 def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
     integer = node["integer"]
     pool = []
@@ -378,20 +407,15 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False):
     c_list = orig_node["c"]
     A_ub_list = orig_node["A_ub"]
     b_ub_list = orig_node["b_ub"]
-    bounds_list = list(orig_node["bounds"])
+    # bounds_list = list(orig_node["bounds"])
+    bounds_list = [node["bounds"] for node in pool]
 
-    inputs = [(c_list, A_ub_list, b_ub_list, node["bounds"]) for node in pool]
+    # inputs = [(c_list, A_ub_list, b_ub_list, node["bounds"]) for node in pool]
+    indexes = [i for i in range(len(pool))]
+    print(len(indexes))
+    with Pool(8,process_init,[c_list,A_ub_list,b_ub_list,bounds_list]) as p:
+        results = p.map(optimize_node3, indexes)
 
-    with Pool() as p:
-        results = p.starmap(optimize_node2, inputs)
-            #     break
-        
-    # for j in jobs:
-    #     j.start()
-
-    # # Ensure all of the processes have finished
-    # for j in jobs:
-    #     j.join()
     return results
 
 def main():
@@ -407,7 +431,7 @@ def main():
     A = np.array([weights])  # Single inequality constraint for total weight
     b = np.array([capacity]) # Knapsack capacity
     bounds = [(0, 1) for _ in range(n)]  # Relaxed 0-1 constraint
-    integer  = [1,1,1,1]
+    integer  = [1,1,1,1,1,1,1,1,1,1,1]
 
     node = {
         "c" : c,
@@ -422,10 +446,10 @@ def main():
         "sol" : None
     }
     # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
-    start = time.time()
+    # start = time.time()
     sol = bruteForceSolveMILP(node)
-    # print(time.time()-start)
-    # print(len(sol))
+    # # print(time.time()-start)
+    # print(sol)
     # start = time.time()
     # solver = BruteForceMILP(node)
     # _,sol = solver.solve(store_pool = True ,verbose = False, max_iter = 100)
@@ -436,4 +460,10 @@ def main():
     # print(sol)
 
 if __name__ == "__main__":
-    cProfile.run("main()",sort = "time")
+    pr = cProfile.Profile()
+    pr.enable()
+    main()
+    pr.disable()
+    stats = Stats(pr)
+    stats.sort_stats('tottime').print_stats(20)
+    # cProfile.run("main()",sort = "time")
