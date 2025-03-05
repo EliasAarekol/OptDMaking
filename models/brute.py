@@ -258,7 +258,7 @@ def optimize_node3(i):
         A_eq,
         b_eq,
         bound,
-        # options={"threads": 1}
+        options={"threads": 4, "parallel" : True,"simplex_max_concurrency": 8}
         )
     
 
