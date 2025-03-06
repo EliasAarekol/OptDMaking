@@ -5,10 +5,11 @@ from collections import deque
 import numpy as np
 from multiprocessing import Pool
 # from threading import Thread
-# import time
+import time
 import cProfile
 import scipy
 from pstats import Stats
+import highspy
 
 
 # BFS brute force search for MILP solutions
@@ -229,6 +230,60 @@ class BruteForceMILPPARA:
 
         return self.sol, self.pool
     
+def translate_to_highspy(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=None):
+    """
+    Translate a linear programming problem defined in scipy format to highspy.
+
+    Parameters:
+        c (np.array): Coefficient vector of the objective function.
+        A_ub (np.array): Inequality constraint matrix (optional).
+        b_ub (np.array): Inequality constraint vector (optional).
+        A_eq (np.array): Equality constraint matrix (optional).
+        b_eq (np.array): Equality constraint vector (optional).
+        bounds (list of tuples): Bounds for each variable, e.g., [(0, None), (0, None)].
+
+    Returns:
+        h (highspy.Highs): A Highs object with the problem defined.
+    """
+    # Initialize the Highs object
+    h = highspy.Highs()
+
+    # Add variables (columns) to the model with their bounds
+    num_vars = len(c)
+    if bounds is None:
+        # Default bounds: 0 <= x <= inf
+        bounds = [(0, None)] * num_vars
+
+    for i in range(num_vars):
+        lb, ub = bounds[i]
+        # Convert None to highspy.kHighsInf for unbounded variables
+        lb = -highspy.kHighsInf if lb is None else lb
+        ub = highspy.kHighsInf if ub is None else ub
+        h.addVar(lb, ub)  # Add variable with bounds
+
+    # Add the objective function
+    for i in range(num_vars):
+        h.changeColCost(i, c[i])
+
+    # Add equality constraints (A_eq x = b_eq)
+    if A_eq is not None and b_eq is not None:
+        num_eq_constraints, num_vars_eq = A_eq.shape
+        assert num_vars_eq == num_vars, "A_eq must have the same number of columns as variables"
+        for i in range(num_eq_constraints):
+            coefficients = A_eq[i, :]
+            # Equality constraint: b_eq[i] <= A_eq[i] * x <= b_eq[i]
+            h.addRow(b_eq[i], b_eq[i], num_vars, list(range(num_vars)), coefficients.tolist())
+
+    # Add inequality constraints (A_ub x <= b_ub)
+    if A_ub is not None and b_ub is not None:
+        num_ub_constraints, num_vars_ub = A_ub.shape
+        assert num_vars_ub == num_vars, "A_ub must have the same number of columns as variables"
+        for i in range(num_ub_constraints):
+            coefficients = A_ub[i, :]
+            # Inequality constraint: -inf <= A_ub[i] * x <= b_ub[i]
+            h.addRow(-highspy.kHighsInf, b_ub[i], num_vars, list(range(num_vars)), coefficients.tolist())
+
+    return h
 def optimize_node(node):
     return scipy.optimize.linprog(
         node["c"],
@@ -260,6 +315,28 @@ def optimize_node3(i):
         bound,
         options={"threads": 4, "parallel" : True,"simplex_max_concurrency": 8}
         )
+def optimize_node4(i):
+    bound = bounds[i]
+    h = translate_to_highspy(
+        c,
+        A_ub,
+        b_ub,
+        A_eq,
+        b_eq,
+        bound
+    )
+    h.silent()
+    h.run()
+    return
+    # return scipy.optimize.linprog(
+    #     c,
+    #     A_ub,
+    #     b_ub,
+    #     A_eq,
+    #     b_eq,
+    #     bound,
+    #     options={"threads": 4, "parallel" : True,"simplex_max_concurrency": 8}
+    #     )
     
 
 def optimize_node_para(node,results,index):
@@ -358,9 +435,9 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False,pro
 
     indexes = [i for i in range(len(pool))]
     with Pool(processes,process_init,[c,A_ub,b_ub,A_eq,b_eq,bounds_list]) as p:
-        results = p.map(optimize_node3, indexes)
-    results = [res for res in results if res.success]
-    return results
+        results = p.map(optimize_node4, indexes)
+    # results = [res for res in results if res.success]
+    # return results
 
 def main():
     values = np.array([1,2,2,5,1])
@@ -392,10 +469,10 @@ def main():
         "sol" : None
     }
     # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
-    # start = time.time()
-    sol = bruteForceSolveMILP(node,max_iter = 10000)
-    # print(sol)
-    # # print(time.time()-start)
+    start = time.time()
+    sol = bruteForceSolveMILP(node,max_iter = 10000,processes= 2 )
+    print(sol)
+    print(time.time()-start)
     # print(sol)
     # start = time.time()
     # solver = BruteForceMILP(node)
@@ -413,4 +490,4 @@ if __name__ == "__main__":
     pr.disable()
     stats = Stats(pr)
     stats.sort_stats('time').print_stats(20)
-    # cProfile.run("main()",sort = "time")
+    cProfile.run("main()",sort = "time")
