@@ -42,6 +42,7 @@ class Knapsack(model.Model):
         b = np.hstack((upper,middle))
         integer = np.ones((self.n_desc_vars,1))
         integer = np.vstack((integer,0))
+        integer = np.vstack((integer,0))
         bounds =  [(0, 1) for _ in range(self.n_desc_vars)]
         bounds.append((None,None))
         bounds.append((None,None))
@@ -78,62 +79,6 @@ class Knapsack(model.Model):
         }
         return node 
     
-    # def get_LP_formulation(self):
-    #     neg_ones = -1 * np.ones((self.n_value_pieces,1))
-    #     upper = np.hstack((self.a,neg_ones))
-    #     eye = np.eye(self.n_desc_vars)
-    #     middle = np.hstack((eye,np.zeros((self.n_desc_vars,1))))
-    #     lower = np.hstack((self.w,0))
-    #     A = np.vstack((upper,middle,lower))
-        
-    #     upper = -self.a @ self.B_t + self.b
-    #     middle = 1 - self.B_t
-    #     lower = self.W_max - self.w @ self.B_t
-    #     b = np.hstack((upper,middle,lower))
-    #     integer = np.ones((self.n_desc_vars,1))
-    #     integer = np.vstack((integer,0))
-    #     bounds =  [(0, 1) for _ in range(self.n_desc_vars)]
-    #     bounds.append((None,None))
-
-    #     c = np.hstack((self.c,1))
-    #     # enforces has to take an action. here its removed temp
-    #     A_eq = np.hstack((np.ones(self.n_desc_vars),0))
-    #     A_eq = np.atleast_2d(A_eq)
-    #     A = np.vstack((A,A_eq))
-    #     b = np.hstack((b,1))
-    #     A_eq = None
-    #     b_eq = 1
-    #     b_eq = None
-    #     node = {
-    #         "c" : c,
-    #         "A_ub" : A,
-    #         "b_ub" : b,
-    #         "A_eq" : A_eq,
-    #         "b_eq" :  b_eq,
-    #         "bounds" : bounds,
-    #         "integer" : integer,
-    #         "parent" : None,
-    #         "children" : [],
-    #         "sol" : None
-    #     }
-    #     return node
-    
-    # Highly unlikely that this works properly
-    # def lagrange_gradient(self,x_t,state,ineq_duals):
-    #     # This doesnt work with experience replay
-    #     w_lambda = ineq_duals[-2]
-    #     dLdw = w_lambda *(state + x_t)
-    #     dLda = []
-    #     dLdb = []
-    #     for i in range(self.n_value_pieces):
-    #         dLda.append(-ineq_duals[i]*(state + x_t))
-    #         dLdb.append(-ineq_duals[i])
-    #     dLda = np.array(dLda).flatten()
-    #     dLdb = np.array(dLdb).flatten()
-    #     # print(dLda)
-    #     res = np.concat((dLdw,dLda,dLdb))
-    #     # return dLdw,dLda,dLdb
-    #     return res
     def lagrange_gradient(self,x_t,state,eq_duals,ineq_duals):
         # This doesnt work with experience replay
         # w_lambda = ineq_duals[-2]
@@ -156,6 +101,12 @@ class Knapsack(model.Model):
 
     def get_params(self):
         return self.w
+    def update_params(self,grad,lr):
+            self.w -= lr*grad[0:5]
+            self.a[0] -= lr*grad[5:10]
+            self.a[1] -= lr*grad[10:15]
+            self.b[0] -= lr*grad[15]
+            self.b[1] -= lr*grad[16]
         
 
 # c =- np.array([1,2,2,5,1])

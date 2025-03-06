@@ -325,9 +325,17 @@ def optimize_node4(i):
         b_eq,
         bound
     )
+    h.setOptionValue("log_to_console",False)
     h.silent()
     h.run()
-    return
+    res = h.getSolution()
+    res = {
+                "fun" : h.getInfo().objective_function_value,
+                "x" : res.col_value ,
+                "dual" : res.row_dual,
+                "success" : res.value_valid
+                  }
+    return res
     # return scipy.optimize.linprog(
     #     c,
     #     A_ub,
@@ -432,12 +440,25 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False,pro
     A_eq = orig_node["A_eq"]
     b_eq = orig_node["b_eq"]
     bounds_list = [node["bounds"] for node in pool]
-
     indexes = [i for i in range(len(pool))]
     with Pool(processes,process_init,[c,A_ub,b_ub,A_eq,b_eq,bounds_list]) as p:
         results = p.map(optimize_node4, indexes)
     # results = [res for res in results if res.success]
-    # return results
+    # results = [res.getSolution() for res in results]
+    num_eq_constraints = A_eq.shape[0] if A_eq is not None else 0
+    # num_ub_constraints, num_vars_ub = A_ub.shape
+
+
+    results = [
+                {
+                "fun" : res["fun"],
+                "x" : res["x"] ,
+                "eqlin" : res["dual"][:num_eq_constraints],
+                "ineqlin" : res["dual"][num_eq_constraints:]
+                  }
+                  for res in results if res["success"]
+               ]
+    return results
 
 def main():
     values = np.array([1,2,2,5,1])

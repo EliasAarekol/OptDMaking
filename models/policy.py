@@ -2,7 +2,7 @@ import numpy as np
 
 
 def policy_dist(obj_vals,beta = 1):
-    exps = np.exp(-beta*obj_vals)
+    exps = np.exp((-1)*beta*obj_vals)
     alpha = np.sum(exps)
     return exps/alpha
 

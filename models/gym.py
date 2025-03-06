@@ -30,6 +30,7 @@ class KnapsackEnv(gym.Env):
     
     def step(self,action):
         if not self.action_space.contains(action):
+            print(action)
             raise Exception("Action does not belong to action space")
         # Properly handle this
 

@@ -79,10 +79,7 @@ def train_q_table(q_table,rs,lr,df,actions,states,nxt_states,eps = 1e-3,mode = 0
             
         
         diff = np.sum(np.abs(new-old))
-        print(diff)
-        iter += 1
-    print(iter)
-    return q_table,diff
+    return new,diff
     
 # q = np.random.uniform(0,1,size=(4,3))
 # print(q)
@@ -122,8 +119,9 @@ if __name__ == "__main__":
     # Print updated Q-table
     print("\nUpdated Q-table:\n", q_table)
     start = time.time()
-    q_test,_ = train_q_table(q_table2,rs,lr,df,actions,states,nxt_states,mode = 0)
+    q_test,_ = train_q_table(q_table2,rs,lr,df,actions,states,nxt_states,mode = 1)
     print(time.time()-start)
-    print()
-    print(q_test)
-    print(q_test-q_table2)
+    # print()
+    # print(q_test)
+    # print()
+    # print(q_test-q_table2)
