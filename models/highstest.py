@@ -83,17 +83,21 @@ import time
 
 # # Solve the problem
 # h.run()
-# solution = h.getSolution()
+# # solution = h.getSolution()
 
+# import highspy
+# import numpy as np
 
-def translate_to_highspy(c, A_ub, b_ub, bounds=None):
+def translate_to_highspy(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=None):
     """
-    Translate a linear programming problem defined by A_ub and b_ub into highspy format.
+    Translate a linear programming problem defined in scipy format to highspy.
 
     Parameters:
         c (np.array): Coefficient vector of the objective function.
-        A_ub (np.array): Inequality constraint matrix.
-        b_ub (np.array): Inequality constraint vector.
+        A_ub (np.array): Inequality constraint matrix (optional).
+        b_ub (np.array): Inequality constraint vector (optional).
+        A_eq (np.array): Equality constraint matrix (optional).
+        b_eq (np.array): Equality constraint vector (optional).
         bounds (list of tuples): Bounds for each variable, e.g., [(0, None), (0, None)].
 
     Returns:
@@ -119,50 +123,139 @@ def translate_to_highspy(c, A_ub, b_ub, bounds=None):
     for i in range(num_vars):
         h.changeColCost(i, c[i])
 
-    # Add the inequality constraints
-    num_constraints, num_vars = A_ub.shape
-    for i in range(num_constraints):
-        # Extract the coefficients for the current constraint
-        coefficients = A_ub[i, :]
-        # Add the constraint: -inf <= A_ub[i] * x <= b_ub[i]
-        h.addRow(-highspy.kHighsInf, b_ub[i], num_vars, list(range(num_vars)), coefficients.tolist())
+    # Add equality constraints (A_eq x = b_eq)
+    if A_eq is not None and b_eq is not None:
+        num_eq_constraints, num_vars_eq = A_eq.shape
+        assert num_vars_eq == num_vars, "A_eq must have the same number of columns as variables"
+        for i in range(num_eq_constraints):
+            coefficients = A_eq[i, :]
+            # Equality constraint: b_eq[i] <= A_eq[i] * x <= b_eq[i]
+            h.addRow(b_eq[i], b_eq[i], num_vars, list(range(num_vars)), coefficients.tolist())
+
+    # Add inequality constraints (A_ub x <= b_ub)
+    if A_ub is not None and b_ub is not None:
+        num_ub_constraints, num_vars_ub = A_ub.shape
+        assert num_vars_ub == num_vars, "A_ub must have the same number of columns as variables"
+        for i in range(num_ub_constraints):
+            coefficients = A_ub[i, :]
+            # Inequality constraint: -inf <= A_ub[i] * x <= b_ub[i]
+            h.addRow(-highspy.kHighsInf, b_ub[i], num_vars, list(range(num_vars)), coefficients.tolist())
 
     return h
+
 # Example usage
 if __name__ == "__main__":
-
-
-    values = np.array([1, 2, 2, 5, 1])
-    weights = np.array([2, 3, 1, 4, 1])
-    capacity = 10
-    n = len(values)
     # Define the problem in scipy format
-    c = -values   # Maximize -> minimize negative value
-    A = np.array([weights])  # Single inequality constraint for total weight
-    b = np.array([capacity]) # Knapsack capacity
-    bounds = [(0, 1) for _ in range(n)] # Variable bounds
+    c = np.array([-1, 4])  # Objective function: minimize -x1 + 4x2
+
+    # Inequality constraints: -3x1 + x2 <= 6 and x1 + 2x2 <= 4
+    A_ub = np.array([[-3, 1], [1, 2]])
+    b_ub = np.array([6, 4])
+
+    # Equality constraint: x1 + x2 = 2 (optional)
+    A_eq = np.array([[1, 1]])
+    b_eq = np.array([2])
+
+    # Variable bounds: x1 >= 0, x2 >= 0
+    bounds = [(0, None), (0, None)]
 
     # Translate to highspy
-    h = translate_to_highspy(c, A,b, bounds)
+    start = time.time()
+    h = translate_to_highspy(c, A_ub, b_ub, A_eq, b_eq, bounds)
 
     # Solve the problem
-    start = time.time()
     h.run()
     print(time.time()-start)
+
+    # Retrieve solutions
     solution = h.getSolution()
-    print("Optimal solution:", solution.col_value)
-    print("Dual", solution.row_dual)
-    print(solution.dual_valid)
+    primal_solution = solution.col_value  # Primal solution (x)
+    dual_solution = solution.row_value    # Dual solution (shadow prices)
+    reduced_costs = solution.col_dual     # Reduced costs (related to variable bounds)
+
+    # Print results
+    print("Optimal primal solution (x):", primal_solution)
+    print("Dual solution (shadow prices):", dual_solution)
+    print("Reduced costs:", reduced_costs)
+    print("Objective value:", primal_solution @ c)
+    
     start = time.time()
     
     sol = linprog( 
-        -values,
-        np.atleast_2d(weights),
-        capacity,
-        None,
-        None,
-        bounds = [(0, 1) for _ in range(n)],
+        -c,
+        A_ub,
+        b_ub,
+        A_eq,
+        b_eq,
+        bounds,
         )
     print(time.time()-start)
+# def translate_to_highspy(c, A_ub, b_ub, bounds=None):
+#     """
+#     Translate a linear programming problem defined by A_ub and b_ub into highspy format.
+
+#     Parameters:
+#         c (np.array): Coefficient vector of the objective function.
+#         A_ub (np.array): Inequality constraint matrix.
+#         b_ub (np.array): Inequality constraint vector.
+#         bounds (list of tuples): Bounds for each variable, e.g., [(0, None), (0, None)].
+
+#     Returns:
+#         h (highspy.Highs): A Highs object with the problem defined.
+#     """
+#     # Initialize the Highs object
+#     h = highspy.Highs()
+
+#     # Add variables (columns) to the model with their bounds
+#     num_vars = len(c)
+#     if bounds is None:
+#         # Default bounds: 0 <= x <= inf
+#         bounds = [(0, None)] * num_vars
+
+#     for i in range(num_vars):
+#         lb, ub = bounds[i]
+#         # Convert None to highspy.kHighsInf for unbounded variables
+#         lb = -highspy.kHighsInf if lb is None else lb
+#         ub = highspy.kHighsInf if ub is None else ub
+#         h.addVar(lb, ub)  # Add variable with bounds
+
+#     # Add the objective function
+#     for i in range(num_vars):
+#         h.changeColCost(i, c[i])
+
+#     # Add the inequality constraints
+#     num_constraints, num_vars = A_ub.shape
+#     for i in range(num_constraints):
+#         # Extract the coefficients for the current constraint
+#         coefficients = A_ub[i, :]
+#         # Add the constraint: -inf <= A_ub[i] * x <= b_ub[i]
+#         h.addRow(-highspy.kHighsInf, b_ub[i], num_vars, list(range(num_vars)), coefficients.tolist())
+
+#     return h
+# # Example usage
+# if __name__ == "__main__":
+
+
+#     values = np.array([1, 2, 2, 5, 1])
+#     weights = np.array([2, 3, 1, 4, 1])
+#     capacity = 10
+#     n = len(values)
+#     # Define the problem in scipy format
+#     c = -values   # Maximize -> minimize negative value
+#     A = np.array([weights])  # Single inequality constraint for total weight
+#     b = np.array([capacity]) # Knapsack capacity
+#     bounds = [(0, 1) for _ in range(n)] # Variable bounds
+
+#     # Translate to highspy
+#     h = translate_to_highspy(c, A,b, bounds)
+
+#     # Solve the problem
+#     start = time.time()
+#     h.run()
+#     print(time.time()-start)
+#     solution = h.getSolution()
+#     print("Optimal solution:", solution.col_value)
+#     print("Dual", solution.row_dual)
+#     print(solution.dual_valid)
     
-    print(sol)
+#     print(sol)
