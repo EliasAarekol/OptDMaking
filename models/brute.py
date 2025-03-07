@@ -327,6 +327,7 @@ def optimize_node4(i):
     )
     h.setOptionValue("log_to_console",False)
     h.silent()
+    # h.writeModel("lp_problem.lp")
     h.run()
     res = h.getSolution()
     res = {
@@ -335,6 +336,7 @@ def optimize_node4(i):
                 "dual" : res.row_dual,
                 "success" : res.value_valid
                   }
+
     return res
     # return scipy.optimize.linprog(
     #     c,
@@ -403,24 +405,27 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False,pro
     pool = []
     queue = deque()
     res = optimize_node(node)
-    pool.append(node)
+    # pool.append(node)
     if not res.success:
         return None
 
     initial_guess = manhattan_round(res.x, integer)
     queue.append(initial_guess)
     visited = set()
-    visited.add(tuple(initial_guess))
-    visited = set()
-    visited.add(tuple(initial_guess))
+    # visited.add(tuple(initial_guess))
+    # visited = set()
+    # visited.add(tuple(initial_guess))
     iter = 1
-    best_value = float('inf')
+    # best_value = float('inf')
     orig_node = node
     orig_bounds = node["bounds"].copy()
     while len(queue) > 0 and  iter <= max_iter:
         iter += 1
 
         x_fixed = queue.popleft()
+        if tuple(x_fixed) in visited:
+            continue
+        visited.add(tuple(x_fixed))
         new_bounds = orig_bounds.copy()
         for i, is_int in enumerate(integer):
             if is_int:
@@ -432,7 +437,7 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False,pro
             neighbor_tuple = tuple(neighbor)
             if neighbor_tuple not in visited:
                 queue.append(neighbor)
-                visited.add(neighbor_tuple)
+                # visited.add(neighbor_tuple)
   
     c = orig_node["c"]
     A_ub = orig_node["A_ub"]
@@ -460,55 +465,55 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False,pro
                ]
     return results
 
-def main():
-    values = np.array([1,2,2,5,1])
-    weights = np.array([2,3,1,4,1])
-    # values = np.array([1,2,2,5,1,1,1,1,1,1,1])
-    # weights = np.array([2,3,1,4,1,1,1,1,1,1,1])     # Item weights
-    capacity = 10                       # Knapsack capacity
+# def main():
+#     values = np.array([1,2,2,5,1])
+#     weights = np.array([2,3,1,4,1])
+#     # values = np.array([1,2,2,5,1,1,1,1,1,1,1])
+#     # weights = np.array([2,3,1,4,1,1,1,1,1,1,1])     # Item weights
+#     capacity = 10                       # Knapsack capacity
 
-    n = len(values)
+#     n = len(values)
 
-    # Define the linear programming matrices
-    c = -values   # Maximize -> minimize negative value
-    A = np.array([weights])  # Single inequality constraint for total weight
-    b = np.array([capacity]) # Knapsack capacity
-    bounds = [(0, 1) for _ in range(n)]  # Relaxed 0-1 constraint
-    # integer  = [1,1,1,1,1,1,1,1,1,1,1]
-    integer  = [1,1,1,1,1]
+#     # Define the linear programming matrices
+#     c = -values   # Maximize -> minimize negative value
+#     A = np.array([weights])  # Single inequality constraint for total weight
+#     b = np.array([capacity]) # Knapsack capacity
+#     bounds = [(0, 1) for _ in range(n)]  # Relaxed 0-1 constraint
+#     # integer  = [1,1,1,1,1,1,1,1,1,1,1]
+#     integer  = [1,1,1,1,1]
 
-    node = {
-        "c" : c,
-        "A_ub" : A,
-        "b_ub" : b,
-        "A_eq" : None,
-        "b_eq" :  None,
-        "bounds" : bounds,
-        "integer" : integer,
-        "parent" : None,
-        "children" : [],
-        "sol" : None
-    }
-    # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
-    start = time.time()
-    sol = bruteForceSolveMILP(node,max_iter = 10000,processes= 2 )
-    print(sol)
-    print(time.time()-start)
-    # print(sol)
-    # start = time.time()
-    # solver = BruteForceMILP(node)
-    # _,sol = solver.solve(store_pool = True ,verbose = False, max_iter = 10000)
-    # print(time.time()-start)
-    # print(len(sol))
+#     node = {
+#         "c" : c,
+#         "A_ub" : A,
+#         "b_ub" : b,
+#         "A_eq" : None,
+#         "b_eq" :  None,
+#         "bounds" : bounds,
+#         "integer" : integer,
+#         "parent" : None,
+#         "children" : [],
+#         "sol" : None
+#     }
+#     # init_node = Node(c,A_ub=A,b_ub=b,bounds=bounds,integer=integer)
+#     start = time.time()
+#     sol = bruteForceSolveMILP(node,max_iter = 10000,processes= 2 )
+#     print(sol)
+#     print(time.time()-start)
+#     # print(sol)
+#     # start = time.time()
+#     # solver = BruteForceMILP(node)
+#     # _,sol = solver.solve(store_pool = True ,verbose = False, max_iter = 10000)
+#     # print(time.time()-start)
+#     # print(len(sol))
     
-    # sol = solver.sol
-    # print(sol)
+#     # sol = solver.sol
+#     # print(sol)
 
-if __name__ == "__main__":
-    pr = cProfile.Profile()
-    pr.enable()
-    main()
-    pr.disable()
-    stats = Stats(pr)
-    stats.sort_stats('time').print_stats(20)
-    cProfile.run("main()",sort = "time")
+# if __name__ == "__main__":
+#     pr = cProfile.Profile()
+#     pr.enable()
+#     main()
+#     pr.disable()
+#     stats = Stats(pr)
+#     stats.sort_stats('time').print_stats(20)
+#     cProfile.run("main()",sort = "time")

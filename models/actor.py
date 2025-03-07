@@ -1,4 +1,4 @@
-from models.brute import bruteForceSolveMILP
+from models.brute import bruteForceSolveMILP,BruteForceMILP
 from models.bnb import BranchAndBound
 from models.policy import policy_dist,nabla_log_pi
 from models.q_table import train_q_table
@@ -32,18 +32,29 @@ class Actor:
         # Compute next action
         self.model.update_state(new_state)
         node = self.model.get_LP_formulation() 
+        # print("b_eq",node["b_eq"])
+        # print("state",new_state)
+
+        # solver = BruteForceMILP(node)
+        # solver.solve(store_pool= True)
+        # sol_pool2 = solver.pool 
         sol_pool = self.solver(node,self.max_iter) # Has to return an array of dicts that include the action x, the obj func, and marginals
+        # if sol_pool != sol_pool2:
+        #     raise Exception(sol_pool,sol_pool2)
+        if len(sol_pool) < 2:
+            raise Exception("Solution pool needs atleast 2 elements")
         obj_values =np.array( [sol["fun"] for sol in sol_pool])
         pol = policy_dist(obj_values,self.beta)
         draw = categorical(pol)
         actions = [sol["x"][0:self.n_desc_vars] for sol in sol_pool]
         # Compute model specific gradient
-        ineq_margs = [sol["ineqlin"] for sol in sol_pool]
-        eq_margs = [sol["eqlin"] for sol in sol_pool]
+        ineq_margs = [np.array(sol["ineqlin"]) for sol in sol_pool] # negative signs here could be wrong
+        eq_margs = [np.array(sol["eqlin"]) for sol in sol_pool] #negative signs here could be wrong
 
         lag_grads = [self.model.lagrange_gradient(action,new_state,eq_marg,ineq_marg) for action,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
         action = actions[draw]
         lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])
+        # print("lag_grads",lag_grads)
         self.nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
         return action
     
@@ -69,9 +80,12 @@ class Actor:
             # print(actions)
             # print(nabs)
             self.q_table,_ = train_q_table(self.q_table,rewards,self.lr,self.df,actions,states,nxt_states)
+            # print("q_table",self.q_table)
+            # print("nabs",nabs)
             pol_grad = (nabs.T @ self.q_table[actions,states])/len(rewards)
             self.model.update_params(pol_grad,self.lr)
         self.buffer.reset()
+    
 
 
 

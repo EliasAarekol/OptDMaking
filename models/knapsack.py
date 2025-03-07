@@ -62,7 +62,7 @@ class Knapsack(model.Model):
         A_eq = np.atleast_2d(A_eq)
         lower = self.W_max - self.w @ self.B_t
 
-        b_eq = 1
+        # b_eq = 1
         b_eq = lower
         # print(A_eq.shape)
         node = {
@@ -89,8 +89,8 @@ class Knapsack(model.Model):
         dLda = []
         dLdb = []
         for i in range(self.n_value_pieces):
-            dLda.append(ineq_duals[i]*(state + x_t))
-            dLdb.append(ineq_duals[i])
+            dLda.append(-ineq_duals[i]*(state + x_t))
+            dLdb.append(-ineq_duals[i])
         dLda = np.array(dLda).flatten()
         dLdb = np.array(dLdb).flatten()
         # print(dLda)
@@ -103,10 +103,11 @@ class Knapsack(model.Model):
         return self.w
     def update_params(self,grad,lr):
             self.w -= lr*grad[0:5]
-            self.a[0] -= lr*grad[5:10]
-            self.a[1] -= lr*grad[10:15]
-            self.b[0] -= lr*grad[15]
-            self.b[1] -= lr*grad[16]
+            # self.w = np.maximum(np.zeros(self.w.shape[0]),self.w-lr*grad[0:5])
+            # self.a[0] -= lr*grad[5:10]
+            # self.a[1] -= lr*grad[10:15]
+            # self.b[0] -= lr*grad[15]
+            # self.b[1] -= lr*grad[16]
         
 
 # c =- np.array([1,2,2,5,1])

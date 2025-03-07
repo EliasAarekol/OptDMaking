@@ -1,6 +1,8 @@
 
 import numpy as np
 from models import knapsack, gym,actor
+import matplotlib.pyplot as plt
+from time import time
 
 def main():
     n_non_relevant_solution = 2
@@ -31,20 +33,23 @@ def main():
     
     q = np.zeros((n_actions,n_states))
     state = gym_model.state
-    act = actor.Actor(m,"brute",beta = 1,lr = 0.1, df = 0.9)
+    act = actor.Actor(m,"brute",beta = 0.5,lr = 1, df = 0.9)
     act.init_q_table(q)
 
 
 
 
     training_iters = 10
-    rollout_iters = 100
-    total_iters = 10
+    rollout_iters = 20
+    total_iters = 50
     # q = np.random.uniform(0,1,size = (n_actions,n_states))
     # print(q)
     # Set inital state
     ep_reward =0
     ep_rewards = []
+    ep_reward_per_p = 0
+    ep_rewards_per_p = []
+    start = time()
     
     # m.update_state(init_state)
     for _ in range(total_iters):
@@ -55,16 +60,30 @@ def main():
             old_state = info["old_state"]
             new_state = info["new_state"]
             act.update_buffers(reward,action_number,old_state,new_state)
+            ep_reward += reward
+            ep_reward_per_p+=reward
             if terminated:
+                ep_rewards.append(ep_reward)
+                ep_reward = 0
                 obs,_ = gym_model.reset()
             state = obs
+        ep_rewards_per_p.append(ep_reward_per_p/rollout_iters)
+        ep_reward_per_p = 0
         act.train(iters = training_iters,sample = False)
-        print(m.w)
+        # print(m.w)
     print(w_true)
     print(m.w)
+    print("Training took: ",time()-start,"seconds")
+    plt.subplot(2,1,1)
+    plt.plot(range(len(ep_rewards)),ep_rewards)
+    plt.subplot(2,1,2)
+    plt.plot(range(len(ep_rewards_per_p)),ep_rewards_per_p)
+
+    plt.show()
    
 
-
+def moving_average(x, w):
+    return np.convolve(x, np.ones(w), 'valid') / w
 
 if __name__ == "__main__":
     main()

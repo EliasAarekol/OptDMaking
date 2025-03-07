@@ -161,7 +161,7 @@ if __name__ == "__main__":
 
     # Translate to highspy
     start = time.time()
-    h = translate_to_highspy(c, A_ub, b_ub, A_eq, b_eq, bounds)
+    h = translate_to_highspy(-c, A_ub, b_ub, A_eq, b_eq, bounds)
 
     # Solve the problem
     h.run()
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     # Retrieve solutions
     solution = h.getSolution()
     primal_solution = solution.col_value  # Primal solution (x)
-    dual_solution = solution.row_value    # Dual solution (shadow prices)
+    dual_solution = solution.row_dual    # Dual solution (shadow prices)
     reduced_costs = solution.col_dual     # Reduced costs (related to variable bounds)
 
     # Print results
@@ -189,7 +189,8 @@ if __name__ == "__main__":
         b_eq,
         bounds,
         )
-    print(time.time()-start)
+    # print(time.time()-start)
+    print(sol)
 # def translate_to_highspy(c, A_ub, b_ub, bounds=None):
 #     """
 #     Translate a linear programming problem defined by A_ub and b_ub into highspy format.
