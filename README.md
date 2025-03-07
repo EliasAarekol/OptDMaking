@@ -33,4 +33,7 @@
  - Look for PPO or similar for training inspiration
  - Rewrite the brute force solver to be asynchronous - works for large problems but not for small
  - Something wrong with the brute force solver, sometimes gives non-integer solutions
+ - Investigate cvxpylayers
+ - Move pool outside 
+
  
