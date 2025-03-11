@@ -47,7 +47,7 @@ class Knapsack(model.Model):
         bounds.append((None,None))
         bounds.append((None,None))
 
-        c = np.hstack((self.c,1,1))
+        c = np.hstack((self.c,1,0.5))
         # print(c.shape)
         # enforces has to take an action. here its removed temp
         A_eq = np.hstack((np.ones(self.n_desc_vars),0))
@@ -102,6 +102,7 @@ class Knapsack(model.Model):
     def get_params(self):
         return self.w
     def update_params(self,grad,lr):
+        # pass
             self.w -= lr*grad[0:5]
             # self.w = np.maximum(np.zeros(self.w.shape[0]),self.w-lr*grad[0:5])
             # self.a[0] -= lr*grad[5:10]

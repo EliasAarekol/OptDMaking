@@ -79,7 +79,7 @@ class KnapsackEnv(gym.Env):
             
             reward = -tot_weight + self.W_max
             terminated = True
-        elif action_index == len(action):
+        elif action_index == len(action): # No action picked
             # print(self.state)
             reward = 0
             terminated = True

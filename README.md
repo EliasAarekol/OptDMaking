@@ -2,11 +2,11 @@
 
 ### TODO
 
- - Look at solvers structure, right now you need a new object for each node which sucks
+ - <s> Look at solvers structure, right now you need a new object for each node which sucks</S>
  - <s> Don't know if rewards from gym models should be positive or negative </s>
  - Implement gym mode properly so that can use gymnasium.make
  - <s> implement stochastic policy - need soluition pool </s>
- - solution pool for solvers
+ - <s> solution pool for solvers </s>
  - <s> solution pool for brute </s>
  - <s> implement advantage table </s>
  - <s> implement training</s>
@@ -18,22 +18,26 @@
     - solution
     - marginals/dual solution
     - obj_func
- - Rewrite solvers to not be OOP
- - Maybe wrap solvers into policy taker or something
+ - <s> Rewrite solvers to not be OOP </s>
+ - <s> Maybe wrap solvers into policy taker or something </s>
  - <s> How to handle end of run, think right now its working</s>
- - L1 relaxation
+ - <s>  L1 relaxation </s>
  - <s> terminate when no more possible </s>
  - Handle action encoding better, right now returned by gym model
- - Handle no feasible solutions to problem solved by lp
+ - <s> Handle no feasible solutions to problem solved by lp </s> Shouldnt ever happen
  - For some reason gives 0 reward sometimes, i think gym model doesnt work properly
- - Solve bruteforce with multiprocessing?
- - Redefine step update, perhaps as a self defined function 
- - Clean up gradient code
+ - <s> Solve bruteforce with multiprocessing? </s>
+ - <s> Redefine step update, perhaps as a self defined function </s>
+ - <s> Clean up gradient code </s>
  - Check convergence and size of Q table
- - Look for PPO or similar for training inspiration
- - Rewrite the brute force solver to be asynchronous - works for large problems but not for small
- - Something wrong with the brute force solver, sometimes gives non-integer solutions
- - Investigate cvxpylayers
- - Move pool outside 
+ - <s> Look for PPO or similar for training inspiration </s>
+ - <s> Rewrite the brute force solver to be asynchronous - works for large problems but not for small </S>
+ - <s> Something wrong with the brute force solver, sometimes gives non-integer solutions </s>
+ - <s> Investigate cvxpylayers </s>
+ - <s> Move pool outside </s>
+ - Make gradient code general for LP problem
+ - Fix file structure
+ - 
+ - 
 
  

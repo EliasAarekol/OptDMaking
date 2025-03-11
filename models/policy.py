@@ -1,10 +1,15 @@
 import numpy as np
-
+import torch
 
 def policy_dist(obj_vals,beta = 1):
     exps = np.exp((-1)*beta*obj_vals)
     alpha = np.sum(exps)
     return exps/alpha
+
+def policy_dist_torch(obj_vals,beta = 1):
+    exps = torch.exp((-1)*beta*obj_vals)
+    alpha = torch.sum(exps)
+    return torch.divide(exps,alpha)
 
 
 # This math could be off

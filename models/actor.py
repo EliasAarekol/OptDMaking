@@ -1,4 +1,4 @@
-from models.brute import bruteForceSolveMILP,BruteForceMILP
+from models.brute import BruteForcePara
 from models.bnb import BranchAndBound
 from models.policy import policy_dist,nabla_log_pi
 from models.q_table import train_q_table
@@ -13,7 +13,7 @@ def categorical(p):
 class Actor:
     def __init__(self,model,solver = "brute",max_iter = 10000,beta = 1,lr = 0.01,df = 0.9):
         self.model = model
-        self.solver = bruteForceSolveMILP if solver == "brute" else BranchAndBound # Fix this
+        # self.solver = bruteForceSolveMILP if solver == "brute" else BranchAndBound # Fix this
         self.max_iter = 10000 
         self.beta = beta
         self.lag_grads = None
@@ -24,6 +24,7 @@ class Actor:
         self.q_table = None
         self.lr = lr
         self.df = df
+        self.solver = BruteForcePara(4) # Fix this
 
     def init_q_table(self,q_table):
         self.q_table = q_table
@@ -38,7 +39,7 @@ class Actor:
         # solver = BruteForceMILP(node)
         # solver.solve(store_pool= True)
         # sol_pool2 = solver.pool 
-        sol_pool = self.solver(node,self.max_iter) # Has to return an array of dicts that include the action x, the obj func, and marginals
+        sol_pool = self.solver.bruteForceSolveMILP(node,self.max_iter) # Has to return an array of dicts that include the action x, the obj func, and marginals
         # if sol_pool != sol_pool2:
         #     raise Exception(sol_pool,sol_pool2)
         if len(sol_pool) < 2:
@@ -67,8 +68,8 @@ class Actor:
                 # t_indexes = np.ones((size*num_samples,))
                 # f_indexes = np.zeros((size*(1-num_samples),))
                 # indexes = np.vstack((t_indexes,f_indexes))
-                indexes = np.array(range(size*num_samples))
-                indexes = np.random.shuffle(indexes) 
+                indexes = np.array(range(int(size*num_samples)))
+                np.random.shuffle(indexes) 
             else:
                 indexes = np.array(range(size))
             indexes = indexes.astype(int)

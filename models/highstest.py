@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     # Inequality constraints: -3x1 + x2 <= 6 and x1 + 2x2 <= 4
     A_ub = np.array([[-3, 1], [1, 2]])
-    b_ub = np.array([6, 4])
+    b_ub = np.array([6, 3])
 
     # Equality constraint: x1 + x2 = 2 (optional)
     A_eq = np.array([[1, 1]])

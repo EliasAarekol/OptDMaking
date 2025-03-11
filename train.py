@@ -12,16 +12,16 @@ def main():
     np.random.seed(0)
     w = w_true + np.random.uniform(-0.5,0.5,size=(5,))
     print("w:",w)
-    a = np.array([
-        [0.1,0.2,0.2,0.1,0.5],
-        [0.3,0.4,0.1,0.3,0.2]
-    ])
-    b = np.array([1,2])
     # a = np.array([
-    #     [0.,0.,0.,0.,0.],
-    #     [0.,0.,0.,0.,0.]
+    #     [0.1,0.2,0.2,0.1,0.5],
+    #     [0.3,0.4,0.1,0.3,0.2]
     # ])
-    # b = np.array([0,0])
+    # b = np.array([1,2])
+    a = np.array([
+        [0.,0.,0.,0.,0.],
+        [0.,0.,0.,0.,0.]
+    ])
+    b = np.array([0,0])
     W_max = [10]
     m = knapsack.Knapsack(-c,w,a,b,W_max)
     init_state = np.array([0,0,0,0,0])
@@ -33,7 +33,7 @@ def main():
     
     q = np.zeros((n_actions,n_states))
     state = gym_model.state
-    act = actor.Actor(m,"brute",beta = 0.5,lr = 1, df = 0.9)
+    act = actor.Actor(m,"brute",beta = 1,lr = .1, df = 0.9)
     act.init_q_table(q)
 
 
@@ -41,7 +41,7 @@ def main():
 
     training_iters = 10
     rollout_iters = 20
-    total_iters = 50
+    total_iters = 2000
     # q = np.random.uniform(0,1,size = (n_actions,n_states))
     # print(q)
     # Set inital state
@@ -50,7 +50,6 @@ def main():
     ep_reward_per_p = 0
     ep_rewards_per_p = []
     start = time()
-    
     # m.update_state(init_state)
     for _ in range(total_iters):
         for _ in range(rollout_iters):
@@ -67,17 +66,23 @@ def main():
                 ep_reward = 0
                 obs,_ = gym_model.reset()
             state = obs
-        ep_rewards_per_p.append(ep_reward_per_p/rollout_iters)
+        ep_rewards_per_p.append(ep_reward_per_p)
         ep_reward_per_p = 0
-        act.train(iters = training_iters,sample = False)
+        act.train(iters = training_iters,sample = True,num_samples=0.5)
+        q = act.q_table
         # print(m.w)
     print(w_true)
     print(m.w)
+    print(m.a)
+    print(m.b)
     print("Training took: ",time()-start,"seconds")
-    plt.subplot(2,1,1)
+    plt.subplot(3,1,1)
     plt.plot(range(len(ep_rewards)),ep_rewards)
-    plt.subplot(2,1,2)
+    plt.subplot(3,1,2)
     plt.plot(range(len(ep_rewards_per_p)),ep_rewards_per_p)
+    plt.subplot(3,1,3)
+    plt.imshow(q, cmap='hot', interpolation='nearest')
+
 
     plt.show()
    
