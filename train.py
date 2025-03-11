@@ -6,26 +6,29 @@ from time import time
 
 def main():
     n_non_relevant_solution = 2
-    c = np.array([1,2,2,5,1])
-    w_true = np.array([2,3,1,4,1])
-    # w= np.array([2,3,1,4,1])
+    # c = np.array([1,2,2,5,1,2,4])
+    # w_true = np.array([2,3,1,4,1,10,15])
+    c = np.array([10,1])
+    w_true= np.array([9,5])
     np.random.seed(0)
-    w = w_true + np.random.uniform(-0.5,0.5,size=(5,))
-    print("w:",w)
+    # w = w_true + np.random.uniform(-0.5,0.5,size=(w_true.shape))
+    w = np.array([0,0])
     # a = np.array([
     #     [0.1,0.2,0.2,0.1,0.5],
     #     [0.3,0.4,0.1,0.3,0.2]
     # ])
     # b = np.array([1,2])
     a = np.array([
-        [0.,0.,0.,0.,0.],
-        [0.,0.,0.,0.,0.]
+        [0.,0.],
+        [0.,0.]
     ])
     b = np.array([0,0])
     W_max = [10]
-    m = knapsack.Knapsack(-c,w,a,b,W_max)
+    penalty_factor = 0.1
+    m = knapsack.Knapsack(-c,w,a,b,W_max,p_f = penalty_factor)
+    
     init_state = np.array([0,0,0,0,0])
-    gym_model = gym.KnapsackEnv(c,w_true,W_max,0,0.0)
+    gym_model = gym.KnapsackEnv(c,w_true,W_max,0,0.1,p_f =penalty_factor)
     gym_model.reset(seed = 0)
 
     n_states = 2**w_true.shape[0]
@@ -33,15 +36,15 @@ def main():
     
     q = np.zeros((n_actions,n_states))
     state = gym_model.state
-    act = actor.Actor(m,"brute",beta = 1,lr = .1, df = 0.9)
+    act = actor.Actor(m,"brute",beta = 0.5,lr = .1, df = 0.9)
     act.init_q_table(q)
 
 
 
 
     training_iters = 10
-    rollout_iters = 20
-    total_iters = 2000
+    rollout_iters = 10
+    total_iters = 5000
     # q = np.random.uniform(0,1,size = (n_actions,n_states))
     # print(q)
     # Set inital state
@@ -71,20 +74,23 @@ def main():
         act.train(iters = training_iters,sample = True,num_samples=0.5)
         q = act.q_table
         # print(m.w)
+    print("w:",w)
+
     print(w_true)
     print(m.w)
     print(m.a)
     print(m.b)
     print("Training took: ",time()-start,"seconds")
-    plt.subplot(3,1,1)
+    plt.subplot(4,1,1)
     plt.plot(range(len(ep_rewards)),ep_rewards)
-    plt.subplot(3,1,2)
+    plt.subplot(4,1,2)
     plt.plot(range(len(ep_rewards_per_p)),ep_rewards_per_p)
-    plt.subplot(3,1,3)
+    plt.subplot(4,1,3)
+    plt.plot(range(len(ep_rewards)-99),moving_average(ep_rewards,100))
+    plt.subplot(4,1,4)
     plt.imshow(q, cmap='hot', interpolation='nearest')
 
-
-    plt.show()
+    plt.savefig("res.png",dpi = 100)
    
 
 def moving_average(x, w):

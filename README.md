@@ -37,7 +37,7 @@
  - <s> Move pool outside </s>
  - Make gradient code general for LP problem
  - Fix file structure
- - 
- - 
+ - penalty factor needs to be lower than any action you want to be picked, can be learned? I think
+ - Think the value function in the 
 
  

@@ -12,6 +12,7 @@ class Knapsack(model.Model):
             a,
             b,
             W_max,
+            p_f = 1
             ):
         self.c = c # 1 x n_x
         self.w = w.astype(float) # 1 x n_x
@@ -22,6 +23,7 @@ class Knapsack(model.Model):
 
         self.n_value_pieces = a.shape[0]
         self.n_desc_vars = self.w.shape[0]
+        self.p_f = p_f
 
 
     def update_state(self,B_t):
@@ -47,7 +49,7 @@ class Knapsack(model.Model):
         bounds.append((None,None))
         bounds.append((None,None))
 
-        c = np.hstack((self.c,1,0.5))
+        c = np.hstack((self.c,1,self.p_f))
         # print(c.shape)
         # enforces has to take an action. here its removed temp
         A_eq = np.hstack((np.ones(self.n_desc_vars),0))
@@ -89,8 +91,8 @@ class Knapsack(model.Model):
         dLda = []
         dLdb = []
         for i in range(self.n_value_pieces):
-            dLda.append(-ineq_duals[i]*(state + x_t))
-            dLdb.append(-ineq_duals[i])
+            dLda.append(ineq_duals[i]*(state + x_t))
+            dLdb.append(ineq_duals[i])
         dLda = np.array(dLda).flatten()
         dLdb = np.array(dLdb).flatten()
         # print(dLda)
@@ -103,12 +105,12 @@ class Knapsack(model.Model):
         return self.w
     def update_params(self,grad,lr):
         # pass
-            self.w -= lr*grad[0:5]
-            # self.w = np.maximum(np.zeros(self.w.shape[0]),self.w-lr*grad[0:5])
-            # self.a[0] -= lr*grad[5:10]
-            # self.a[1] -= lr*grad[10:15]
-            # self.b[0] -= lr*grad[15]
-            # self.b[1] -= lr*grad[16]
+        # self.w -= lr*grad[0:5]
+        self.w = np.maximum(np.zeros(self.w.shape[0]),self.w-lr*grad[0:self.w.shape[0]])
+        self.a[0] -= lr*grad[self.w.shape[0]:self.w.shape[0]+self.a.shape[1]]
+        self.a[1] -= lr*grad[self.w.shape[0]+self.a.shape[1]:self.w.shape[0]+self.a.shape[1]+self.a.shape[1]] # Quick fix
+        self.b[0] -= lr*grad[-2]
+        self.b[1] -= lr*grad[-1]
         
 
 # c =- np.array([1,2,2,5,1])

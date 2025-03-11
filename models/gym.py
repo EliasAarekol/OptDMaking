@@ -2,7 +2,7 @@ import gymnasium as gym
 import numpy as np
 class KnapsackEnv(gym.Env):
 
-    def __init__(self,c,w,W_max,mean,std):
+    def __init__(self,c,w,W_max,mean,std,p_f = 1):
         self.c = c
         self.w = w
         self.W_max = W_max
@@ -12,12 +12,13 @@ class KnapsackEnv(gym.Env):
         self.state = None
         self.mean = mean
         self.std = std
+        self.p_f = p_f
     def _get_obs(self):
         pass
     def reset(self,seed = None):
         super().reset(seed  = seed)
         self.observation_space.seed(seed=seed)
-        self.state = self.observation_space.sample(mask = np.array([0,0,0,0,0],dtype=np.int8))
+        self.state = self.observation_space.sample(mask = np.zeros((self.n_items,)).astype(np.int8))
         weights_left = self.w*(1-self.state.astype(int))
         while np.all(self.state.astype(int)):
             self.state = self.observation_space.sample()
@@ -77,7 +78,7 @@ class KnapsackEnv(gym.Env):
         elif self.W_max < tot_weight:
             
             
-            reward = -tot_weight + self.W_max
+            reward = (-tot_weight + self.W_max)[0]*self.p_f
             terminated = True
         elif action_index == len(action): # No action picked
             # print(self.state)
