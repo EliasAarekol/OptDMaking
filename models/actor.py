@@ -25,6 +25,7 @@ class Actor:
         self.lr = lr
         self.df = df
         self.solver = BruteForcePara(4) # Fix this
+        self.value_est = 0
 
     def init_q_table(self,q_table):
         self.q_table = q_table
@@ -51,7 +52,7 @@ class Actor:
         # Compute model specific gradient
         ineq_margs = [np.array(sol["ineqlin"]) for sol in sol_pool] # negative signs here could be wrong
         eq_margs = [np.array(sol["eqlin"]) for sol in sol_pool] #negative signs here could be wrong
-
+        self.value_est = sol_pool[draw]["x"][-2]
         lag_grads = [self.model.lagrange_gradient(action,new_state,eq_marg,ineq_marg) for action,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
         action = actions[draw]
         lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])

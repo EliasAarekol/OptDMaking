@@ -40,11 +40,11 @@ def main():
     act.init_q_table(q)
 
 
-
+    model_values = {}
 
     training_iters = 10
     rollout_iters = 10
-    total_iters = 5000
+    total_iters = 1000
     # q = np.random.uniform(0,1,size = (n_actions,n_states))
     # print(q)
     # Set inital state
@@ -62,6 +62,7 @@ def main():
             old_state = info["old_state"]
             new_state = info["new_state"]
             act.update_buffers(reward,action_number,old_state,new_state)
+            model_values[new_state] = act.value_est
             ep_reward += reward
             ep_reward_per_p+=reward
             if terminated:
@@ -80,6 +81,8 @@ def main():
     print(m.w)
     print(m.a)
     print(m.b)
+    print(model_values)
+    print(q)
     print("Training took: ",time()-start,"seconds")
     plt.subplot(4,1,1)
     plt.plot(range(len(ep_rewards)),ep_rewards)
