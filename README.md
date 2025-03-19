@@ -39,5 +39,7 @@
  - Fix file structure
  - penalty factor needs to be lower than any action you want to be picked, can be learned? I think
  - Think the value function in the 
+ - Make actor impl flexible so that i can use different critics and solvers
+ - Solver configs should be set at init
 
  

@@ -1,7 +1,5 @@
-from models.brute import BruteForcePara
-from models.bnb import BranchAndBound
-from models.policy import policy_dist,nabla_log_pi
-from models.q_table import train_q_table
+from src.utils.policy import policy_dist,nabla_log_pi
+from src.utils.q_table import train_q_table
 import numpy as np
 
 def categorical(p):
@@ -11,11 +9,15 @@ def categorical(p):
 
 
 class Actor:
-    def __init__(self,model,solver = "brute",max_iter = 10000,beta = 1,lr = 0.01,df = 0.9):
+    def __init__(self,model,solver,critic,max_iter = 10000,beta = 1,lr = 0.01,df = 0.9):
         self.model = model
         # self.solver = bruteForceSolveMILP if solver == "brute" else BranchAndBound # Fix this
-        self.max_iter = 10000 
+
+        # Should maybe be own config thing
+        self.max_iter = max_iter # Should be solver config
         self.beta = beta
+
+
         self.lag_grads = None
         self.lag_grad_action_drawn = None
         self.n_desc_vars = self.model.n_desc_vars
@@ -24,7 +26,9 @@ class Actor:
         self.q_table = None
         self.lr = lr
         self.df = df
-        self.solver = BruteForcePara(4) # Fix this
+        # self.solver = BruteForcePara(4) # Fix this
+        self.solver = solver
+        self.critic = critic
         self.value_est = 0
 
     def init_q_table(self,q_table):
@@ -40,7 +44,7 @@ class Actor:
         # solver = BruteForceMILP(node)
         # solver.solve(store_pool= True)
         # sol_pool2 = solver.pool 
-        sol_pool = self.solver.bruteForceSolveMILP(node,self.max_iter) # Has to return an array of dicts that include the action x, the obj func, and marginals
+        sol_pool = self.solver.solve(node,self.max_iter) # Has to return an array of dicts that include the action x, the obj func, and marginals
         # if sol_pool != sol_pool2:
         #     raise Exception(sol_pool,sol_pool2)
         if len(sol_pool) < 2:
@@ -49,14 +53,18 @@ class Actor:
         pol = policy_dist(obj_values,self.beta)
         draw = categorical(pol)
         actions = [sol["x"][0:self.n_desc_vars] for sol in sol_pool]
+
+
+        self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
+
+
         # Compute model specific gradient
         ineq_margs = [np.array(sol["ineqlin"]) for sol in sol_pool] # negative signs here could be wrong
         eq_margs = [np.array(sol["eqlin"]) for sol in sol_pool] #negative signs here could be wrong
-        self.value_est = sol_pool[draw]["x"][-2]
         lag_grads = [self.model.lagrange_gradient(action,new_state,eq_marg,ineq_marg) for action,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
         action = actions[draw]
         lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])
-        # print("lag_grads",lag_grads)
+        # Compute policy sensitivity
         self.nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
         return action
     
@@ -82,6 +90,16 @@ class Actor:
             # print(actions)
             # print(nabs)
             self.q_table,_ = train_q_table(self.q_table,rewards,self.lr,self.df,actions,states,nxt_states)
+
+
+
+            # self.critic.train()
+            # qualities = self.critic.evaluate(actions,states)
+
+
+
+
+
             # print("q_table",self.q_table)
             # print("nabs",nabs)
             pol_grad = (nabs.T @ self.q_table[actions,states])/len(rewards)

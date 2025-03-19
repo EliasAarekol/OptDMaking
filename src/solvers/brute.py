@@ -1,16 +1,13 @@
 from copy import copy
 from math import inf
 from collections import deque
-# from scipy.optimize import linprog
 import numpy as np
 from multiprocessing import Pool
-# from threading import Thread
 import time
-import cProfile
 import scipy
-from pstats import Stats
 import highspy
-import os,sys
+from src.solvers.solver_template import Solver
+
 
 
 # BFS brute force search for MILP solutions
@@ -373,7 +370,7 @@ def bruteForceSolveMILP(node,max_iter=10000, store_pool=False, verbose=False,pro
     return results
 
 
-class BruteForcePara:
+class BruteForcePara(Solver):
     """ Implements a parallell brute force algorithm
         Can be rewritten into pure function if pool is passed as argument. 
     """
@@ -500,7 +497,7 @@ class BruteForcePara:
                 neighbors.append(x_new)
         return neighbors
 
-    def bruteForceSolveMILP(self,node,max_iter=10000, store_pool=False, verbose=False,processes = None):
+    def solve(self,node,max_iter=10000):
         integer = node["integer"]
         pool = []
         queue = deque()

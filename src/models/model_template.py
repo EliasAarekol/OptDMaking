@@ -18,5 +18,10 @@ class Model(ABC):
     def get_params(self):
         pass
 
+    @abstractmethod
+    def update_params(self,grad,lr):
+        pass
+
+
     
 

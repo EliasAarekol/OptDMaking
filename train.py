@@ -1,8 +1,11 @@
 
 import numpy as np
-from models import knapsack, gym,actor
+from src.models import knapsack
+from src.gym_envs import gym
 import matplotlib.pyplot as plt
 from time import time
+
+from src import actor
 
 def main():
     n_non_relevant_solution = 2
