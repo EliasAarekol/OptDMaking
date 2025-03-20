@@ -2,6 +2,8 @@
 import numpy as np
 from src.models import knapsack
 from src.gym_envs import gym
+from src.critic import q_table
+from src.solvers import brute
 import matplotlib.pyplot as plt
 from time import time
 
@@ -37,13 +39,20 @@ def main():
     n_states = 2**w_true.shape[0]
     n_actions = w_true.shape[0] + 1
     
+
+    lr = .1
+    df = .9
+    beta = .5
+
+    solver = brute.BruteForcePara(processes=4)
     q = np.zeros((n_actions,n_states))
+    critic = q_table.Q_table(q,lr,df,eps = .01)
     state = gym_model.state
-    act = actor.Actor(m,"brute",beta = 0.5,lr = .1, df = 0.9)
-    act.init_q_table(q)
+    act = actor.Actor(m,solver,critic,beta = beta,lr = lr,df = df)
+    # act.init_q_table(q)
 
 
-    model_values = {}
+    # model_values = {}
 
     training_iters = 10
     rollout_iters = 10
@@ -65,7 +74,7 @@ def main():
             old_state = info["old_state"]
             new_state = info["new_state"]
             act.update_buffers(reward,action_number,old_state,new_state)
-            model_values[new_state] = act.value_est
+            # model_values[new_state] = act.value_est
             ep_reward += reward
             ep_reward_per_p+=reward
             if terminated:
@@ -76,7 +85,7 @@ def main():
         ep_rewards_per_p.append(ep_reward_per_p)
         ep_reward_per_p = 0
         act.train(iters = training_iters,sample = True,num_samples=0.5)
-        q = act.q_table
+        # q = act.q_table
         # print(m.w)
     print("w:",w)
 
@@ -84,7 +93,7 @@ def main():
     print(m.w)
     print(m.a)
     print(m.b)
-    print(model_values)
+    # print(model_values)
     print(q)
     print("Training took: ",time()-start,"seconds")
     plt.subplot(4,1,1)

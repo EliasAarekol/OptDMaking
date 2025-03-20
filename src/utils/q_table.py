@@ -79,7 +79,7 @@ def train_q_table(q_table,rs,lr,df,actions,states,nxt_states,eps = 1e-3,mode = 0
             
         
         diff = np.sum(np.abs(new-old))
-    return new,diff
+    return new
     
 # q = np.random.uniform(0,1,size=(4,3))
 # print(q)

@@ -23,7 +23,7 @@ class Actor:
         self.n_desc_vars = self.model.n_desc_vars
         self.nab = None
         self.buffer = ExperienceBuffer()
-        self.q_table = None
+        # self.q_table = None
         self.lr = lr
         self.df = df
         # self.solver = BruteForcePara(4) # Fix this
@@ -31,8 +31,8 @@ class Actor:
         self.critic = critic
         self.value_est = 0
 
-    def init_q_table(self,q_table):
-        self.q_table = q_table
+    # def init_q_table(self,q_table):
+    #     self.q_table = q_table
 
     def act(self,new_state):
         # Compute next action
@@ -55,7 +55,7 @@ class Actor:
         actions = [sol["x"][0:self.n_desc_vars] for sol in sol_pool]
 
 
-        self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
+        # self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
 
 
         # Compute model specific gradient
@@ -89,12 +89,14 @@ class Actor:
             nabs = np.array(self.buffer.nabs)[indexes]
             # print(actions)
             # print(nabs)
-            self.q_table,_ = train_q_table(self.q_table,rewards,self.lr,self.df,actions,states,nxt_states)
+            # self.q_table,_ = train_q_table(self.q_table,rewards,self.lr,self.df,actions,states,nxt_states)
+            self.critic.train(rewards,actions,states,nxt_states)
+
 
 
 
             # self.critic.train()
-            # qualities = self.critic.evaluate(actions,states)
+            qualities = self.critic.evaluate(actions,states)
 
 
 
@@ -102,7 +104,7 @@ class Actor:
 
             # print("q_table",self.q_table)
             # print("nabs",nabs)
-            pol_grad = (nabs.T @ self.q_table[actions,states])/len(rewards)
+            pol_grad = (nabs.T @ qualities)/len(rewards)
             self.model.update_params(pol_grad,self.lr)
         self.buffer.reset()
     
