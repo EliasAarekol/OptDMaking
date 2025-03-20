@@ -42,5 +42,10 @@
  - <s>Make actor impl flexible so that i can use different critics and solvers </S>
  - Solver configs should be set at init
  - remove q_Table from utils maybe
+ - fix doc for all classes
+ - fix abstact class inputs
+ - fix knapsack a and b update
+ - fix brute force strucutre, remove a lot
+ 
 
  
