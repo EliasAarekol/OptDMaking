@@ -251,7 +251,8 @@ class BranchAndBoundRevamped:
                 print(node)
 
             if not res.success:
-                print("infeasible")
+                if verbose:
+                    print("infeasible")
                 continue
 
             if self.all_integer(res.x,integer):

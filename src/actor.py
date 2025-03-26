@@ -1,9 +1,9 @@
-from src.utils.policy import policy_dist,nabla_log_pi
+from src.utils.policy import policy_dist,nabla_log_pi,categorical
 from src.utils.q_table import train_q_table
 import numpy as np
 
-def categorical(p):
-    return (p.cumsum(-1) >= np.random.uniform(size=p.shape[:-1])[..., None]).argmax(-1)
+# def categorical(p):
+#     return (p.cumsum(-1) >= np.random.uniform(size=p.shape[:-1])[..., None]).argmax(-1)
 
 
 

@@ -1,6 +1,11 @@
 import numpy as np
 import torch
 
+def categorical(p):
+    return (p.cumsum(-1) >= np.random.uniform(size=p.shape[:-1])[..., None]).argmax(-1)
+
+
+
 def policy_dist(obj_vals,beta = 1):
     exps = np.exp((-1)*beta*obj_vals)
     alpha = np.sum(exps)

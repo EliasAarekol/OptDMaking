@@ -47,7 +47,8 @@ class GG1Queue(Model): # Fix D
         # b_eq = np.hstack((b_eq_upper,b_eq_lower))
         
         bounds = copy(self.bounds)
-        extra_bounds = [(0,None) for _ in range(state_size[0])]
+        extra_bounds = [(0,10) for _ in range(state_size[0])]
+        # extra_bounds = [(0,None) for _ in range(state_size[0])]
         extra_bounds.append((None,None))
         bounds.extend(extra_bounds)
         integer = np.hstack((self.integer,self.integer,0))

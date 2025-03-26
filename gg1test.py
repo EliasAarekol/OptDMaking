@@ -83,6 +83,21 @@ def assign_obj_bounds(actions,bounding_sets):
 
     return best_ub
 
+def naive_branch_sample(conds,n,bounds):
+    """
+    """
+    action = np.zeros(shape = (n,))
+    vars = []
+    for var,_,val in conds:
+        vars.append(var)
+        action[var] = val
+    
+    for i in range(n):
+        bound = bounds[i]
+        action[i] = np.random.randint(bound[0],bound[1]) if i not in vars else action[i]
+    return action
+
+
 
 if __name__ == "__main__":
     prob_size = 5
@@ -94,7 +109,7 @@ if __name__ == "__main__":
     b = np.zeros((2,))
     wx = np.random.uniform(1,2,size = (prob_size,))
     W_x_max = np.random.randint(20,30,size = (1,) )
-    bounds = [(0,None) for _ in range(len(c))]
+    bounds = [(0,20) for _ in range(len(c))]
     integer = np.ones_like(c)
     
     model = GG1Queue(c,a,b,wx,W_x_max,bounds,integer)
@@ -126,21 +141,23 @@ if __name__ == "__main__":
     print(not_faths[0]["conds"])
     
     bounding_set = [{"conditions" : sol["conds"] , "upper_bound" : sol["fun"]} for sol in sol2 if sol["fathomed"]]
-    # print(bounding_set)
+    print(bounding_set)
+    print(bounding_set[1])
+    action = naive_branch_sample(bounding_set[1]["conditions"],prob_size*2,node["bounds"])
+    print(action)
+    # node = {
+    #         "c" : node["c"][:prob_size],
+    #         "A_ub" : node["A_ub"][:,:prob_size],
+    #         "b_ub" : node["b_ub"],
+    #         "A_eq" : None,
+    #         "b_eq" :  node["b_eq"],
+    #         "bounds" : node["bounds"][:prob_size],
+    # }
     
-    node = {
-            "c" : node["c"][:prob_size],
-            "A_ub" : node["A_ub"][:,:prob_size],
-            "b_ub" : node["b_ub"],
-            "A_eq" : None,
-            "b_eq" :  node["b_eq"],
-            "bounds" : node["bounds"][:prob_size],
-    }
-    
-    a_space = gen_feas_action_space(float('inf'),5,10,node)
-    print(len(a_space))
-    action_bounds = assign_obj_bounds(a_space,bounding_set)
-    print(action_bounds)
+    # a_space = gen_feas_action_space(float('inf'),5,10,node)
+    # print(len(a_space))
+    # action_bounds = assign_obj_bounds(a_space,bounding_set)
+    # print(action_bounds)
     # sol_best = min(sol,key = lambda x : x["fun"])
     # print(sol_best)
     # sol_best = min(solver.pool,key = lambda x : x.fun)

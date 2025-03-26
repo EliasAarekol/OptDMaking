@@ -46,6 +46,7 @@
  - fix abstact class inputs
  - fix knapsack a and b update
  - fix brute force strucutre, remove a lot
- 
+ - Assume for now we require an upper bound on every variable, s.t the feasible space isnt infinite
+
 
  
