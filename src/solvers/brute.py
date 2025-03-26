@@ -534,7 +534,6 @@ class BruteForcePara(Solver):
                 neighbor_tuple = tuple(neighbor)
                 if neighbor_tuple not in visited:
                     queue.append(neighbor)
-
         c = orig_node["c"]
         A_ub = orig_node["A_ub"]
         b_ub = orig_node["b_ub"]
@@ -556,6 +555,7 @@ class BruteForcePara(Solver):
                         }
                         for res in results if res["success"]
                     ]
+
         return results
 
 def main():

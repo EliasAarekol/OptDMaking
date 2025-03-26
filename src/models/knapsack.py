@@ -1,10 +1,10 @@
 # from models.model import Model
-from src.models import model_template
+from src.models.model_template import Model
 import numpy as np
 
 # from bnb import BranchAndBound
 # from brute import BruteForceMILP
-class Knapsack(model_template.Model):
+class Knapsack(Model):
     def __init__(
             self,
             c,
