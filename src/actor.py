@@ -1,4 +1,4 @@
-from src.utils.policy import policy_dist,nabla_log_pi,categorical
+from src.utils.policy import policy_dist,nabla_log_pi,categorical,naive_branch_sample
 from src.utils.q_table import train_q_table
 import numpy as np
 
@@ -47,22 +47,35 @@ class Actor:
         sol_pool = self.solver.solve(node,self.max_iter) # Has to return an array of dicts that include the action x, the obj func, and marginals
         # if sol_pool != sol_pool2:
         #     raise Exception(sol_pool,sol_pool2)
-        if len(sol_pool) < 2:
-            raise Exception("Solution pool needs atleast 2 elements")
+        if sol_pool is None:
+            return None
+        # if len(sol_pool) < 2:
+        #     raise Exception("Solution pool needs atleast 2 elements")
         obj_values =np.array( [sol["fun"] for sol in sol_pool])
         pol = policy_dist(obj_values,self.beta)
         draw = categorical(pol)
-        actions = [sol["x"][0:self.n_desc_vars] for sol in sol_pool]
+        chosen_sol = sol_pool[draw]
+        # Sample unexplored nodes
+        if chosen_sol["fathomed"]:
+            action = naive_branch_sample(chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
+        else:
+            action = chosen_sol["x"]
+            action = action[0:self.n_desc_vars]
+       
+
 
 
         # self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
 
 
         # Compute model specific gradient
+        actions = [sol["x"][0:self.n_desc_vars] for sol in sol_pool]    
         ineq_margs = [np.array(sol["ineqlin"]) for sol in sol_pool] # negative signs here could be wrong
         eq_margs = [np.array(sol["eqlin"]) for sol in sol_pool] #negative signs here could be wrong
-        lag_grads = [self.model.lagrange_gradient(action,new_state,eq_marg,ineq_marg) for action,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
-        action = actions[draw]
+        lag_grads = [self.model.lagrange_gradient(a,new_state,eq_marg,ineq_marg) for a,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
+
+        # Convert action solution to actual action
+
         lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])
         # Compute policy sensitivity
         self.nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)

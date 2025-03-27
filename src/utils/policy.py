@@ -5,6 +5,20 @@ def categorical(p):
     return (p.cumsum(-1) >= np.random.uniform(size=p.shape[:-1])[..., None]).argmax(-1)
 
 
+def naive_branch_sample(conds,action_size,bounds):
+    """
+    """
+    action = np.zeros(shape = (action_size,))
+    vars = []
+    for var,_,val in conds:
+        vars.append(var)
+        action[var] = val
+    
+    for i in range(action_size):
+        bound = bounds[i]
+        action[i] = np.random.randint(bound[0],bound[1]) if i not in vars else action[i]
+    return action
+
 
 def policy_dist(obj_vals,beta = 1):
     exps = np.exp((-1)*beta*obj_vals)

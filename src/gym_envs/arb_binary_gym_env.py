@@ -1,6 +1,6 @@
 import gymnasium as gym
 import numpy as np
-class KnapsackEnv(gym.Env):
+class Arb_binary(gym.Env):
 
     def __init__(self,c,p,A,B,C,D,E,pf):
         self.c = c 
@@ -11,13 +11,16 @@ class KnapsackEnv(gym.Env):
         self.E = E 
         self.pf = pf
         self.p = p
+        self.observation_space = gym.spaces.MultiBinary(len(c))
+        self.action_space = gym.spaces.MultiBinary(len(c))
+        self.state = None
         
     def _get_obs(self):
         pass
     def reset(self,seed = None):
         super().reset(seed  = seed)
 
-        self.state = self.observation_space.sample(mask = np.zeros((self.n_items,)).astype(np.int8))
+        self.state = self.observation_space.sample(mask = np.zeros((len(self.c),)).astype(np.int8))
 
         return self.state,None
     
@@ -33,13 +36,13 @@ class KnapsackEnv(gym.Env):
         terminated = False
         if np.any(slack > 0):
             terminated = True
-            reward = slack*self.pf
+            reward = np.sum(slack*self.pf)
         if np.all(np.logical_not(action.astype(int))):
             terminated = True
             
-        old_state = self.state_to_index(self.state)
+        old_state = int(''.join(map(str, self.state.astype(int))))
 
-        new_state = self.state_to_index(nxt_state)
+        new_state = int(''.join(map(str, nxt_state.astype(int))))
         self.state = nxt_state
         action_index = self.action_to_index(action)
         

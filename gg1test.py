@@ -83,20 +83,6 @@ def assign_obj_bounds(actions,bounding_sets):
 
     return best_ub
 
-def naive_branch_sample(conds,n,bounds):
-    """
-    """
-    action = np.zeros(shape = (n,))
-    vars = []
-    for var,_,val in conds:
-        vars.append(var)
-        action[var] = val
-    
-    for i in range(n):
-        bound = bounds[i]
-        action[i] = np.random.randint(bound[0],bound[1]) if i not in vars else action[i]
-    return action
-
 
 
 if __name__ == "__main__":
