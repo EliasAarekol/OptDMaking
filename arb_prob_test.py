@@ -1,7 +1,10 @@
+from time import time
 import numpy as np
 from src.solvers.bnb import BranchAndBoundRevamped
+from src.solvers.brute import BruteForcePara
 from gg1test import naive_branch_sample
 from src.utils.policy import policy_dist,nabla_log_pi, categorical
+
 
 
 
@@ -56,27 +59,46 @@ if __name__ == '__main__':
     
 
 
-
+    prob_size = 10
     c = np.random.randint(0,10,size=(prob_size,))
     state = np.random.randint(2,size = prob_size)
     C = np.random.uniform(0,1,size = (prob_size,prob_size))
     D = np.random.uniform(0,2,size = (prob_size,prob_size))
-    E = np.random.uniform(0,2,size = (prob_size))
+    E = np.random.uniform(5,10,size = (prob_size))
     rhs = E - C @ state
     lhs = C
     bounds   = [(0,1) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
     node = {
-        'c' : c,
-        'A_ub' : A_ub,
+        'c' : -c,
+        'A_ub' : lhs,
         'A_eq' : None,
         'b_eq' : None,
-        'b_ub' : b_ub,
+        'b_ub' : rhs,
         'integer' : integer,
         'bounds' : bounds
     }    
-
-    solver = BranchAndBoundRevamped()
-    sols = solver.solve(node,verbose = False)
+    start = time()
+    # solver = BranchAndBoundRevamped()
+    sols = solver.solve(node,verbose = True)
     print(len(sols))
     print(sols[0]['x'])
+    print(time()-start)
+    
+    # solver = BruteForcePara(4)
+    
+    # start = time()
+    # # solver = BranchAndBoundRevamped()
+    # sols = solver.solve(node)
+    # print(len(sols))
+    # print(sols[0]['x'])
+    # print(time()-start)
+    # start = time()
+    # # solver = BranchAndBoundRevamped()
+    # sols = solver.solve(node)
+    # print(len(sols))
+    # print(sols[0]['x'])
+    # print(time()-start)
+
+
+    

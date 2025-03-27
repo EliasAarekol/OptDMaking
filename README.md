@@ -47,6 +47,9 @@
  - fix knapsack a and b update
  - fix brute force strucutre, remove a lot
  - Assume for now we require an upper bound on every variable, s.t the feasible space isnt infinite
+ - Parralleize branch and bound
+   Is currently slower than brute force approach
+   Actually quite similar to parallell brute force approach
 
 
  
