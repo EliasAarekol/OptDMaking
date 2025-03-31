@@ -1,7 +1,7 @@
 
 import numpy as np
 from src.models import arb_bin
-from src.gym_envs import arb_binary_gym_env
+from src.gym_envs import arb_binary_gym_env ,arb_discrete_gym_env
 from src.critic import q_table
 from src.solvers import bnb
 import matplotlib.pyplot as plt
@@ -10,12 +10,13 @@ from time import time
 from src import actor
 
 def main():
-    prob_size = 4
-    np.random.seed(3)
+    prob_size = 3
+    np.random.seed(5)
     num_cons = 6
-    aA = np.random.uniform(0,0.1,size = (2,prob_size))
-    aB = np.random.uniform(0,0.1,size = (2,prob_size))
-    b = np.random.uniform(0,.1,size=(2,))
+    num_pieces = 2
+    aA = np.random.uniform(0,0.1,size = (num_pieces,prob_size))
+    aB = np.random.uniform(0,0.1,size = (num_pieces,prob_size))
+    b = np.random.uniform(0,.1,size=(num_pieces,))
     c = - np.random.randint(0,10,size=(prob_size,))
     state = np.random.randint(2,size = prob_size)
     A = np.random.randint(0,2,size = (prob_size,prob_size))
@@ -23,18 +24,18 @@ def main():
     C = np.random.uniform(0,1,size = (num_cons,prob_size))
     D = np.random.uniform(0,2,size = (num_cons,prob_size))
     E = np.random.uniform(1,3,size = (num_cons))
-    bounds   = [(0,1) for _ in range(len(c))]
+    # bounds   = [(0,1) for _ in range(len(c))]
+    # bounds = [tuple(sorted((np.random.randint(-10,10),np.random.randint(0,20)))) for _ in range(len(c))]
+    bounds = [(0,10) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
     m = arb_bin.Arbbin(c,C,D,E,aA,aB,b,bounds,integer)
+    gym_model = arb_discrete_gym_env.Arb_binary(c,np.zeros_like(c),A,B,C,D,E,1)
+
+    n_states = 999
+    n_actions = 999
     
 
-    gym_model = arb_binary_gym_env.Arb_binary(c,np.zeros_like(c),A,B,C,D,E,1)
-
-    n_states = 9999
-    n_actions = 2**len(c)
-    
-
-    lr = .1
+    lr = .01
     df = .9
     beta = .5
 
@@ -47,11 +48,11 @@ def main():
     # act.init_q_table(q)
 
 
-    # model_values = {}
+    model_values = {}
 
-    training_iters = 10
+    training_iters = 200
     rollout_iters = 10
-    total_iters = 1000
+    total_iters = 4000
     # q = np.random.uniform(0,1,size = (n_actions,n_states))
     # print(q)
     # Set inital state
@@ -72,9 +73,11 @@ def main():
             action_number = info["action"]
             old_state = info["old_state"]
             new_state = info["new_state"]
+            print(reward,old_state,new_state,action)
+
             if store:
                 act.update_buffers(reward,action_number,old_state,new_state)
-            # model_values[new_state] = act.value_est
+            model_values[new_state] = act.value_est
             ep_reward += reward
             ep_reward_per_p+=reward
             if terminated:
@@ -87,7 +90,7 @@ def main():
         act.train(iters = training_iters,sample = True,num_samples=0.5)
         # q = act.q_table
         # print(m.w)
-
+    print(model_values)
     print("Training took: ",time()-start,"seconds")
     ax = plt.subplot(3,1,1)
     ax.set_title("Episodic reward")
@@ -104,7 +107,7 @@ def main():
     # plt.imshow(q, cmap='hot', interpolation='nearest')
     plt.show()
     plt.savefig("res.png")
-   
+    
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w

@@ -1,4 +1,4 @@
-from src.utils.policy import policy_dist,nabla_log_pi,categorical,naive_branch_sample
+from src.utils.policy import policy_dist,nabla_log_pi,categorical,naive_branch_sample,nn_branch_sample
 from src.utils.q_table import train_q_table
 import numpy as np
 
@@ -57,7 +57,9 @@ class Actor:
         chosen_sol = sol_pool[draw]
         # Sample unexplored nodes
         if chosen_sol["fathomed"]:
-            action = naive_branch_sample(chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
+            
+            # action = naive_branch_sample(chosen_sol['x'][:self.n_desc_vars],chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
+            action = nn_branch_sample(chosen_sol['x'][:self.n_desc_vars],chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
         else:
             action = chosen_sol["x"]
             action = action[0:self.n_desc_vars]
@@ -65,7 +67,7 @@ class Actor:
 
 
 
-        # self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
+        self.value_est = sol_pool[draw]["x"][-1] # Just for value function debug
 
 
         # Compute model specific gradient
@@ -84,7 +86,10 @@ class Actor:
     def train(self,iters = 1000,sample = False,num_samples = 0.5):
 
         # Not sure how q_table should be trained
+
         size = len(self.buffer.rewards)
+        if size == 0:
+            raise Exception("Buffers are empty")
         for _ in range(iters):
             if sample:
                 # t_indexes = np.ones((size*num_samples,))
@@ -104,7 +109,6 @@ class Actor:
             # print(nabs)
             # self.q_table,_ = train_q_table(self.q_table,rewards,self.lr,self.df,actions,states,nxt_states)
             self.critic.train(rewards,actions,states,nxt_states)
-
 
 
 
@@ -146,6 +150,7 @@ class ExperienceBuffer:
         self.states = []
         self.nxt_states = []
         self.nabs = []
+        
     def reset(self):
         del self.rewards[:]
         del self.actions[:]

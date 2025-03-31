@@ -4,19 +4,33 @@ import torch
 def categorical(p):
     return (p.cumsum(-1) >= np.random.uniform(size=p.shape[:-1])[..., None]).argmax(-1)
 
+def isint(x):
+    return int(x) == x
 
-def naive_branch_sample(conds,action_size,bounds):
+def naive_branch_sample(sol,conds,action_size,bounds):
     """
     """
     action = np.zeros(shape = (action_size,))
     vars = []
     for var,_,val in conds:
         vars.append(var)
-        action[var] = val
+        action[var] = sol[var] if isint(sol[var]) else val 
     
     for i in range(action_size):
         bound = bounds[i]
         action[i] = np.random.randint(bound[0],bound[1]) if i not in vars else action[i]
+    return action
+
+def nn_branch_sample(sol,conds,action_size,bounds):
+    action = np.zeros(shape = (action_size,))
+    vars = []
+    for var,_,val in conds:
+        vars.append(var)
+        action[var] = sol[var] if isint(sol[var]) else val 
+    
+    for i in range(action_size):
+        bound = bounds[i]
+        action[i] = max(min(round(sol[i]),bounds[var][1]),bounds[var][0]) if i not in vars else action[i]
     return action
 
 
