@@ -22,6 +22,10 @@ class Model(ABC):
     def update_params(self,grad,lr):
         pass
 
+    @abstractmethod
+    def get_desc_var_indices(self):
+        pass
+
 
     
 

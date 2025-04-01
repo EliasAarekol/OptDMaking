@@ -16,9 +16,6 @@ example_node = {
     "b_eq" : None,
     "bounds" : None,
     "integer" : None,
-    "parent" : None,
-    "children" : [],
-    "sol" : None
 }
 
 
@@ -85,17 +82,17 @@ class BranchAndBound:
     def solve(self,verbose = False):
         res = self.optimize_node(self.init_node)
         if not res.success:
-            print(res)
-            print("infeasible")
+            # print(res)
+            # print("infeasible")
             return None
         self.tree.append(self.init_node)
         iter = 1
         if self.all_integer(res.x):
-            print(res.x[0].is_integer())
+            # print(res.x[0].is_integer())
             self.sol = res
             self.init_node["sol"] = res
             self.end_node = self.init_node
-            print(f"Number of nodes explored: {iter}")
+            # print(f"Number of nodes explored: {iter}")
 
 
             return self.sol
@@ -149,8 +146,8 @@ class BranchAndBoundRevamped:
         Implements a basic branch and bound algorithm, takes a dictionary defining the inital problem node as its input.
     
     """
-    def __init__(self):
-        pass
+    def __init__(self,verbose = False):
+        self.verbose = verbose
 
     def optimize_node(self,node):
         return linprog(
@@ -191,15 +188,16 @@ class BranchAndBoundRevamped:
 
 
 
-    def solve(self,init_node,verbose = False):
+    def solve(self,init_node):
+        verbose = self.verbose
         results = []
         queue = deque()
         
         
         res = self.optimize_node(init_node)
         if not res.success:
-            print(res)
-            print("infeasible")
+            # print(res)
+            # print("infeasible")
             return None
         # self.tree.append(self.init_node)
         iter = 1
@@ -207,7 +205,7 @@ class BranchAndBoundRevamped:
         
         if self.all_integer(res.x,integer):
    
-            print(f"Number of nodes explored: {iter}")
+            # print(f"Number of nodes explored: {iter}")
 
             results.append(  
                            

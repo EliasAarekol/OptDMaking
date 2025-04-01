@@ -4,7 +4,7 @@ import numpy as np
 from copy import copy
 
 class Arbbin(Model): # Fix D
-    def __init__(self,c,C,D,E,aA,aB,b,bounds,integer):
+    def __init__(self,c,C,D,E,aA,aB,b,bounds,integer,pf,exact = False):
         self.c = c.astype(float)
         self.C = C.astype(float)
         self.D = D.astype(float)
@@ -17,16 +17,18 @@ class Arbbin(Model): # Fix D
         self.s_t = None
         self.n_value_pieces = aA.shape[0]
         self.n_desc_vars = self.aA.shape[1]
+        self.pf = pf
 
-
+    def get_desc_var_indices(self):
+        return slice(self.n_desc_vars)
     def update_state(self,s_t):
         self.s_t = s_t
     def get_LP_formulation(self):
-        c = np.hstack((self.c,1))
+        c = np.hstack((self.c,1,self.pf))
         neg_ones = -1 * np.ones((self.aA.shape[0],1))
-        A_ub_upper = np.hstack((self.aB,neg_ones))
+        A_ub_upper = np.hstack((self.aB,neg_ones,np.zeros_like(neg_ones)))
         b_ub_upper = -self.b - self.aA @ self.s_t 
-        A_ub_lower = np.hstack((self.D,np.zeros((self.D.shape[0],1))))
+        A_ub_lower = np.hstack((self.D,np.zeros((self.D.shape[0],1)), - np.ones((self.D.shape[0],1))))
         b_ub_lower = self.E - self.C @ self.s_t
         A_ub = np.vstack((A_ub_upper,A_ub_lower))
         b_ub = np.hstack((b_ub_upper,b_ub_lower))
@@ -36,6 +38,8 @@ class Arbbin(Model): # Fix D
         bounds = copy(self.bounds) # add bounds and integer
         integer = copy(self.integer)
         bounds.append((None,None))
+        bounds.append((0,None))
+        integer.append(0)
         integer.append(0)
         
 

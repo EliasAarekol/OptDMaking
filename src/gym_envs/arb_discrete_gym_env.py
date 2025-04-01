@@ -1,5 +1,6 @@
 import gymnasium as gym
 import numpy as np
+from itertools import product
 class Arb_binary(gym.Env):
 
     def __init__(self,c,p,A,B,C,D,E,pf):
@@ -36,21 +37,30 @@ class Arb_binary(gym.Env):
         
         reward = self.c @ action + self.p @ nxt_state
         terminated = False
-        if np.any(slack > 0):
+        # print(slack)
+        if np.any(slack >= 0):
             terminated = True
             reward = np.sum(slack*self.pf)
-        if np.all(np.logical_not(action.astype(int))):
+        for comb in product(range(10),repeat = 3):
+            # print(comb)
             terminated = True
+            if np.all(self.C @ nxt_state + self.D @ np.array(comb) <= self.E):
+                terminated = False
+                break
+        # if np.all(np.logical_not(action.astype(int))):
+        #     terminated = True
         if not self.observation_space.contains(nxt_state):
             terminated = True
             nxt_state = np.zeros((self.A.shape[1]))
+        
         old_state = int(''.join(map(str, self.state.astype(int))))
 
         new_state = int(''.join(map(str, nxt_state.astype(int))))
         self.state = nxt_state
         action_index = int(''.join(map(str, action.astype(int))))
         
-
+        if old_state == new_state:
+            terminated = True
         info = {
         "action" : action_index,
         "old_state" : old_state,

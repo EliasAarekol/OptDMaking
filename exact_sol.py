@@ -22,7 +22,7 @@ def main():
     aA = np.random.uniform(0,0.1,size = (num_pieces,prob_size))
     aB = np.random.uniform(0,0.1,size = (num_pieces,prob_size))
     b = np.random.uniform(0,.1,size=(num_pieces,))
-    c = np.random.randint(0,10,size=(prob_size,))
+    c = - np.random.randint(0,10,size=(prob_size,))
     state = np.random.randint(2,size = prob_size)
     A = np.random.randint(0,2,size = (prob_size,prob_size))
     B = np.random.randint(0,2,size = (prob_size,prob_size))
@@ -33,7 +33,7 @@ def main():
     # bounds = [tuple(sorted((np.random.randint(-10,10),np.random.randint(0,20)))) for _ in range(len(c))]
     bounds = [(0,9) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
-    m = arb_bin.Arbbin(-c,C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"])
+    m = arb_bin.Arbbin(c,C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"])
     gym_model = arb_discrete_gym_env.Arb_binary(c,np.zeros_like(c),A,B,C,D,E,1)
 
     n_states = 999
@@ -74,7 +74,7 @@ def main():
     start = time()
     # m.update_state(init_state)
     for _ in tqdm(range(total_iters),desc= "Total Iterations"):
-        for i in tqdm(range(rollout_iters),leave=False,desc= "Rollout"):
+        for _ in tqdm(range(rollout_iters),leave=False,desc= "Rollout"):
             action = act.act(state)
             store = True
             if action is None:
@@ -91,7 +91,7 @@ def main():
             model_values[new_state] = act.value_est
             ep_reward += reward
             ep_reward_per_p+=reward
-            if terminated or i == rollout_iters-1:
+            if terminated:
                 ep_rewards.append(ep_reward)
                 metric = {"ep_reward" : ep_reward}
                 if len(ep_rewards) % window_size:
@@ -128,5 +128,7 @@ def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 if __name__ == "__main__":
-    main()
+    # main()
+
+    
     # print(timeit.timeit(main),number = 1)

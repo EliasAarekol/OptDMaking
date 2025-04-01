@@ -1,5 +1,6 @@
 from src.utils.policy import policy_dist,nabla_log_pi,categorical,naive_branch_sample,nn_branch_sample
 from src.utils.q_table import train_q_table
+from tqdm import tqdm
 import numpy as np
 
 # def categorical(p):
@@ -9,15 +10,13 @@ import numpy as np
 
 
 class Actor:
-    def __init__(self,model,solver,critic,max_iter = 10000,beta = 1,lr = 0.01,df = 0.9):
+    def __init__(self,model,solver,critic,beta = 1,lr = 0.01,df = 0.9):
         self.model = model
         # self.solver = bruteForceSolveMILP if solver == "brute" else BranchAndBound # Fix this
 
         # Should maybe be own config thing
-        self.max_iter = max_iter # Should be solver config
-        self.beta = beta
 
-
+        self.desc_vars = self.model.get_desc_var_indices()
         self.lag_grads = None
         self.lag_grad_action_drawn = None
         self.n_desc_vars = self.model.n_desc_vars
@@ -26,6 +25,7 @@ class Actor:
         # self.q_table = None
         self.lr = lr
         self.df = df
+        self.beta = beta
         # self.solver = BruteForcePara(4) # Fix this
         self.solver = solver
         self.critic = critic
@@ -44,7 +44,7 @@ class Actor:
         # solver = BruteForceMILP(node)
         # solver.solve(store_pool= True)
         # sol_pool2 = solver.pool 
-        sol_pool = self.solver.solve(node,self.max_iter) # Has to return an array of dicts that include the action x, the obj func, and marginals
+        sol_pool = self.solver.solve(node) # Has to return an array of dicts that include the action x, the obj func, and marginals
         # if sol_pool != sol_pool2:
         #     raise Exception(sol_pool,sol_pool2)
         if sol_pool is None:
@@ -59,19 +59,20 @@ class Actor:
         if chosen_sol["fathomed"]:
             
             # action = naive_branch_sample(chosen_sol['x'][:self.n_desc_vars],chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
-            action = nn_branch_sample(chosen_sol['x'][:self.n_desc_vars],chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
+            # action = nn_branch_sample(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
+            action = naive_branch_sample(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
         else:
             action = chosen_sol["x"]
-            action = action[0:self.n_desc_vars]
+            action = action[self.desc_vars]
        
 
 
 
-        self.value_est = sol_pool[draw]["x"][-1] # Just for value function debug
+        self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
 
 
         # Compute model specific gradient
-        actions = [sol["x"][0:self.n_desc_vars] for sol in sol_pool]    
+        actions = [sol["x"][self.desc_vars] for sol in sol_pool]    
         ineq_margs = [np.array(sol["ineqlin"]) for sol in sol_pool] # negative signs here could be wrong
         eq_margs = [np.array(sol["eqlin"]) for sol in sol_pool] #negative signs here could be wrong
         lag_grads = [self.model.lagrange_gradient(a,new_state,eq_marg,ineq_marg) for a,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
@@ -90,7 +91,7 @@ class Actor:
         size = len(self.buffer.rewards)
         if size == 0:
             raise Exception("Buffers are empty")
-        for _ in range(iters):
+        for _ in tqdm(range(iters),leave=False,desc = "Training"):
             if sample:
                 # t_indexes = np.ones((size*num_samples,))
                 # f_indexes = np.zeros((size*(1-num_samples),))
