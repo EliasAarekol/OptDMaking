@@ -42,7 +42,7 @@ def main():
 
     window_size = config["plotting"]["window_size"]
 
-    run = wandb.init(config = config)
+    run = wandb.init(name = config["name"],mode = config["wandb_mode"],config = config)
 
 
     act_lr = config["actor"]["lr"]
@@ -53,9 +53,9 @@ def main():
     m.update_state(gym_model.reset()[0])
     solver = bnb.BranchAndBoundRevamped()
     q = np.zeros((n_actions,n_states))
-    critic = q_table.Q_table(q,critic_lr,df,eps = .01)
+    critic = q_table.Q_table(q,critic_lr,df,config["critic"]["eps"])
     state = gym_model.state
-    act = actor.Actor(m,solver,critic,beta = beta,lr = act_lr,df = df)
+    act = actor.Actor(m,solver,critic,beta = beta,lr = act_lr,df = df,nn_sample = config["actor"]["nn_sample"])
     # act.init_q_table(q)
 
 
@@ -73,9 +73,11 @@ def main():
     ep_rewards_per_p = []
     start = time()
     # m.update_state(init_state)
+    fathomed_counter = 0
     for _ in tqdm(range(total_iters),desc= "Total Iterations"):
         for i in tqdm(range(rollout_iters),leave=False,desc= "Rollout"):
-            action = act.act(state)
+            action,act_info = act.act(state)
+            fathomed_counter =  fathomed_counter + 1 if act_info["fathomed"] else fathomed_counter
             store = True
             if action is None:
                 action = np.zeros_like(state)
@@ -85,7 +87,7 @@ def main():
             old_state = info["old_state"]
             new_state = info["new_state"]
             # print(reward,old_state,new_state,action)
-
+            
             if store:
                 act.update_buffers(reward,action_number,old_state,new_state)
             model_values[new_state] = act.value_est
@@ -93,11 +95,13 @@ def main():
             ep_reward_per_p+=reward
             if terminated or i == rollout_iters-1:
                 ep_rewards.append(ep_reward)
-                metric = {"ep_reward" : ep_reward}
+
+                metric = {"ep_reward" : ep_reward , "fathomed_counter" : fathomed_counter}
                 if len(ep_rewards) % window_size:
                     metric["smooth_ep_reward"] = sum(ep_rewards[-window_size:])/window_size
-                ep_reward = 0
                 run.log(metric)
+                ep_reward = 0
+                fathomed_counter = 0
                 obs,_ = gym_model.reset()
             state = obs
         ep_rewards_per_p.append(ep_reward_per_p)

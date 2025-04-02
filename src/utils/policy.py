@@ -7,7 +7,7 @@ def categorical(p):
 def isint(x):
     return int(x) == x
 
-def naive_branch_sample(sol,conds,action_size,bounds):
+def naive_branch_sample(sol,conds,action_size,bounds): # This doesnt handle if there are several conditions on a variable
     """
     """
     action = np.zeros(shape = (action_size,))
@@ -21,7 +21,7 @@ def naive_branch_sample(sol,conds,action_size,bounds):
         action[i] = np.random.randint(bound[0],bound[1]) if i not in vars else action[i]
     return action
 
-def nn_branch_sample(sol,conds,action_size,bounds):
+def nn_branch_sample(sol,conds,action_size,bounds): # This doesnt handle if there are several conditions on a variable
     action = np.zeros(shape = (action_size,))
     vars = []
     for var,_,val in conds:
@@ -30,7 +30,7 @@ def nn_branch_sample(sol,conds,action_size,bounds):
     
     for i in range(action_size):
         bound = bounds[i]
-        action[i] = max(min(round(sol[i]),bounds[var][1]),bounds[var][0]) if i not in vars else action[i]
+        action[i] = max(min(round(sol[i]),bound[1]),bound[0]) if i not in vars  else action[i]
     return action
 
 

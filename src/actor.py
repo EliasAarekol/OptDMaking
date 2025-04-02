@@ -10,7 +10,7 @@ import numpy as np
 
 
 class Actor:
-    def __init__(self,model,solver,critic,beta = 1,lr = 0.01,df = 0.9):
+    def __init__(self,model,solver,critic,beta = 1,lr = 0.01,df = 0.9,nn_sample = False):
         self.model = model
         # self.solver = bruteForceSolveMILP if solver == "brute" else BranchAndBound # Fix this
 
@@ -30,6 +30,7 @@ class Actor:
         self.solver = solver
         self.critic = critic
         self.value_est = 0
+        self.nn_sample = nn_sample
 
     # def init_q_table(self,q_table):
     #     self.q_table = q_table
@@ -37,13 +38,13 @@ class Actor:
     def act(self,new_state):
         # Compute next action
         self.model.update_state(new_state)
-        node = self.model.get_LP_formulation() 
+        node = self.model.get_LP_formulation()
         # print("b_eq",node["b_eq"])
         # print("state",new_state)
 
         # solver = BruteForceMILP(node)
         # solver.solve(store_pool= True)
-        # sol_pool2 = solver.pool 
+        # sol_pool2 = solver.pool
         sol_pool = self.solver.solve(node) # Has to return an array of dicts that include the action x, the obj func, and marginals
         # if sol_pool != sol_pool2:
         #     raise Exception(sol_pool,sol_pool2)
@@ -57,14 +58,16 @@ class Actor:
         chosen_sol = sol_pool[draw]
         # Sample unexplored nodes
         if chosen_sol["fathomed"]:
-            
-            # action = naive_branch_sample(chosen_sol['x'][:self.n_desc_vars],chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
-            # action = nn_branch_sample(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
-            action = naive_branch_sample(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
+            if self.nn_sample:
+                action = nn_branch_sample(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
+            else:
+                action = naive_branch_sample(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
+                # action = naive_branch_sample(chosen_sol['x'][:self.n_desc_vars],chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
+
         else:
             action = chosen_sol["x"]
             action = action[self.desc_vars]
-       
+
 
 
 
@@ -72,7 +75,7 @@ class Actor:
 
 
         # Compute model specific gradient
-        actions = [sol["x"][self.desc_vars] for sol in sol_pool]    
+        actions = [sol["x"][self.desc_vars] for sol in sol_pool]
         ineq_margs = [np.array(sol["ineqlin"]) for sol in sol_pool] # negative signs here could be wrong
         eq_margs = [np.array(sol["eqlin"]) for sol in sol_pool] #negative signs here could be wrong
         lag_grads = [self.model.lagrange_gradient(a,new_state,eq_marg,ineq_marg) for a,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
@@ -82,8 +85,11 @@ class Actor:
         lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])
         # Compute policy sensitivity
         self.nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
-        return action
-    
+        info = {
+            "fathomed" : chosen_sol["fathomed"]
+        }
+        return action,info
+
     def train(self,iters = 1000,sample = False,num_samples = 0.5):
 
         # Not sure how q_table should be trained
@@ -97,7 +103,7 @@ class Actor:
                 # f_indexes = np.zeros((size*(1-num_samples),))
                 # indexes = np.vstack((t_indexes,f_indexes))
                 indexes = np.array(range(int(size*num_samples)))
-                np.random.shuffle(indexes) 
+                np.random.shuffle(indexes)
             else:
                 indexes = np.array(range(size))
             indexes = indexes.astype(int)
@@ -125,7 +131,7 @@ class Actor:
             pol_grad = (nabs.T @ qualities)/len(rewards)
             self.model.update_params(pol_grad,self.lr)
         self.buffer.reset()
-    
+
 
 
 
@@ -140,7 +146,7 @@ class Actor:
         del self.nab
 
 
-        
+
 
 
 
@@ -151,7 +157,7 @@ class ExperienceBuffer:
         self.states = []
         self.nxt_states = []
         self.nabs = []
-        
+
     def reset(self):
         del self.rewards[:]
         del self.actions[:]

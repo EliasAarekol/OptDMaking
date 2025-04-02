@@ -1,5 +1,7 @@
 
-name: "big_rig_run"
+name: "nn_test_if_same_res"
+
+wandb_mode: "online"
 
 numpy_seed: 5
 
@@ -20,6 +22,7 @@ critic:
   eps: 0.01
 
 actor:
+  nn_sample: True
   lr: 0.1
   beta: 0.5
   sample: False
