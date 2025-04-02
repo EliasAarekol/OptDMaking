@@ -51,6 +51,8 @@
    Is currently slower than brute force approach
    Actually quite similar to parallell brute force approach
  - Fix config for brute force
-
+ - Naive and nn have similar performance if all parameters have a bound
+ - Fathoming sometimes just stops
+ - small lr tests seem to experience that fathomed branches have the same conditions and conds on every variable
 
  
