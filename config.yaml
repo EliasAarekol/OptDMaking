@@ -1,4 +1,6 @@
 
+name: "big_rig_run"
+
 numpy_seed: 5
 
 model:

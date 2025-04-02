@@ -50,6 +50,7 @@
  - Parralleize branch and bound
    Is currently slower than brute force approach
    Actually quite similar to parallell brute force approach
+ - Fix config for brute force
 
 
  
