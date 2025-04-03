@@ -21,6 +21,53 @@ def naive_branch_sample(sol,conds,action_size,bounds): # This doesnt handle if t
         action[i] = np.random.randint(bound[0],bound[1]) if i not in vars else action[i]
     return action
 
+
+def naive_branch_sample_only_keep_ints(sol,conds,action_size,bounds): # This doesnt handle if there are several conditions on a variable
+    """
+    Not fixed at condition
+    """
+    action = np.zeros(shape = (action_size,))
+
+    # for i in range(len(sol)):
+    #     if isint(sol[i]):
+    #         action[i] = sol[i]
+    #     elif 
+    vars = []
+    for var,comp,val in conds:
+        vars.append(var)
+        if isint(sol[var]):
+            action[var] = sol[var]
+        elif comp == '<=':
+            action[var] = np.random.randint(bounds[var][0],val)
+        elif comp == '>=':
+            action[var] = np.random.randint(val,bounds[var][1])
+
+    for i in range(action_size):
+        bound = bounds[i]
+        action[i] = np.random.randint(bound[0],bound[1]) if i not in vars else action[i]
+    return action
+
+def nn_branch_sample_only_keep_ints(sol,conds,action_size,bounds): # This doesnt handle if there are several conditions on a variable
+    """
+    Not fixed at condition
+    """
+    action = np.zeros(shape = (action_size,))
+    vars = []
+    for var,comp,val in conds:
+        vars.append(var)
+        if isint(sol[var]):
+            action[var] = sol[var]
+        elif comp == '<=':
+            action[var] = max(min(round(sol[var]),val),bounds[var][0])
+        elif comp == '>=':
+            action[var] = max(min(round(sol[var]),bounds[var][1]),val)
+
+    for i in range(action_size):
+        bound = bounds[i]
+        action[i] = max(min(round(sol[i]),bound[1]),bound[0]) if i not in vars  else action[i]
+    return action
+
+
 def nn_branch_sample(sol,conds,action_size,bounds): # This doesnt handle if there are several conditions on a variable
     action = np.zeros(shape = (action_size,))
     vars = []

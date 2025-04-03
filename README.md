@@ -54,5 +54,8 @@
  - Naive and nn have similar performance if all parameters have a bound
  - Fathoming sometimes just stops
  - small lr tests seem to experience that fathomed branches have the same conditions and conds on every variable
-
+ - Had wrong sign on reward for breaching constraint (think its fixed now) does much worse
+ - Increasing pf in gym model only seems to give lower reward, might point to that its not learning to improve
+  - Made an error in the plotting so that it was looking like it was improving :( 
+ - Finds optimal solution then gets stuck just doing a rollout of all 0s and then a single move, which is prob why the episodic rewards come so rarely
  

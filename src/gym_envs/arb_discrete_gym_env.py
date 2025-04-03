@@ -38,20 +38,23 @@ class Arb_binary(gym.Env):
         reward = self.c @ action + self.p @ nxt_state
         terminated = False
         # print(slack)
+        slack_terminated = False
         if np.any(slack >= 0):
-            terminated = True
-            reward = np.sum(slack*self.pf)
+            slack_terminated = True
+            reward = -np.sum(slack[slack > 0]*self.pf)
+            if reward > 0:
+                raise Exception()
         for comb in product(range(10),repeat = 3):
             # print(comb)
             terminated = True
             if np.all(self.C @ nxt_state + self.D @ np.array(comb) <= self.E):
-                terminated = False
+                terminated = False or slack_terminated
                 break
         # if np.all(np.logical_not(action.astype(int))):
         #     terminated = True
         if not self.observation_space.contains(nxt_state):
             terminated = True
-            nxt_state = np.zeros((self.A.shape[1]))
+            # nxt_state = np.zeros((self.A.shape[1]))
         
         old_state = int(''.join(map(str, self.state.astype(int))))
 

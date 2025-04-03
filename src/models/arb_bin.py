@@ -78,6 +78,7 @@ class Arbbin(Model): # Fix D
         return super().get_params()
     def update_params(self, grad, lr):
         # Initialize index tracker
+        grad = -grad
         idx = 0
 
         # Update self.c parameters
@@ -92,7 +93,7 @@ class Arbbin(Model): # Fix D
         self.aB -= lr * grad[idx : idx + self.aB.size].reshape(self.aB.shape)
         
         idx += self.aB.size
-        self.b -= lr * grad[idx : ]
+        self.b -= - lr * grad[idx : ]
 
     
     

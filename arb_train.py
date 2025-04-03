@@ -34,7 +34,7 @@ def main():
     bounds = [(0,9) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
     m = arb_bin.Arbbin(-c,C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"])
-    gym_model = arb_discrete_gym_env.Arb_binary(c,np.zeros_like(c),A,B,C,D,E,1)
+    gym_model = arb_discrete_gym_env.Arb_binary(c,np.zeros_like(c),A,B,C,D,E,config["gym"]["pf"])
 
     n_states = 999
     n_actions = 999
@@ -93,11 +93,12 @@ def main():
             model_values[new_state] = act.value_est
             ep_reward += reward
             ep_reward_per_p+=reward
+            run.log({"reward" : reward})
             if terminated or i == rollout_iters-1:
                 ep_rewards.append(ep_reward)
 
                 metric = {"ep_reward" : ep_reward , "fathomed_counter" : fathomed_counter}
-                if len(ep_rewards) % window_size:
+                if len(ep_rewards) % window_size == 0:
                     metric["smooth_ep_reward"] = sum(ep_rewards[-window_size:])/window_size
                 run.log(metric)
                 ep_reward = 0
@@ -107,6 +108,11 @@ def main():
         ep_rewards_per_p.append(ep_reward_per_p)
         ep_reward_per_p = 0
         act.train(iters = training_iters,sample = config["actor"]["sample"],num_samples=config["actor"]["num_samples"])
+        c_diff = ((-c -m.c )**2).mean()
+        aA_change = np.sum((aA-m.aA)**2 )
+        aB_change = np.sum((aB-m.aB)**2)
+        b_change = np.sum((b-m.b)**2)
+        run.log({"c_diff" : c_diff , "aA_change" : aA_change , "aB_change" : aB_change, "b_change" : b_change})
         # q = act.q_table
         # print(m.w)
     print(model_values)

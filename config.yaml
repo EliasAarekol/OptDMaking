@@ -1,5 +1,5 @@
 
-name: "nn_test_if_same_res"
+name: "flipped_Grads_naive_fixed_terminate_b_also_with_flipped_b_sign"
 
 wandb_mode: "online"
 
@@ -11,24 +11,25 @@ model:
   n_value_func: 2
   penalty_factor: 100
 
-
+gym:
+  pf: 1
 
 plotting:
   window_size: 100
 
 critic:
-  lr: 0.1
+  lr: 0.01
   df: 0.9
   eps: 0.01
 
 actor:
-  nn_sample: True
-  lr: 0.1
+  nn_sample: False
+  lr: 0.01
   beta: 0.5
   sample: False
   num_samples: 0.5
 
 
-train_iters: 10
-rollout_iters: 10
+train_iters: 20
+rollout_iters: 300
 total_iters: 10000

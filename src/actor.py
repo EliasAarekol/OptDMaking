@@ -1,4 +1,4 @@
-from src.utils.policy import policy_dist,nabla_log_pi,categorical,naive_branch_sample,nn_branch_sample
+from src.utils.policy import policy_dist,nabla_log_pi,categorical,naive_branch_sample,nn_branch_sample,nn_branch_sample_only_keep_ints,naive_branch_sample_only_keep_ints
 from src.utils.q_table import train_q_table
 from tqdm import tqdm
 import numpy as np
@@ -59,9 +59,9 @@ class Actor:
         # Sample unexplored nodes
         if chosen_sol["fathomed"]:
             if self.nn_sample:
-                action = nn_branch_sample(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
+                action = nn_branch_sample_only_keep_ints(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
             else:
-                action = naive_branch_sample(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
+                action = naive_branch_sample_only_keep_ints(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
                 # action = naive_branch_sample(chosen_sol['x'][:self.n_desc_vars],chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
 
         else:

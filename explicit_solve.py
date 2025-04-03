@@ -20,7 +20,7 @@ D = np.random.uniform(0,1,size = (num_cons,prob_size))
 E = np.random.uniform(0,2,size = (num_cons,prob_size))
 F = np.random.uniform(1,3,size = (num_cons))
 # c = - np.random.randint(0,10,size=(prob_size,))
-T = 2
+T = 4
 
 m = prob_size
 n = prob_size
@@ -139,10 +139,12 @@ obs,reward,terminated,_,info = gym_model.step(np.array([0,1,0]))
 print(obs,reward,terminated)
 obs,reward,terminated,_,info = gym_model.step(np.array([0,0,0]))
 print(obs,reward,terminated)
-obs,reward,terminated,_,info = gym_model.step(np.array([0,0,0]))
+obs,reward,terminated,_,info = gym_model.step(np.array([1,0,0]))
 print(obs,reward,terminated)
 print(A)
 print(B)
 print(D)
 print(E)
 print(F)
+print(c)
+print(list(range(2)))
