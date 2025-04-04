@@ -67,8 +67,8 @@ class Arbbin(Model): # Fix D
             dLdaB.append(ineq_duals[i]*x_t)
             dLdb.append(ineq_duals[i])
         dLdc = np.array(dLdc).flatten()
-        dLdaA = np.array(dLdaA).flatten()
-        dLdaB = np.array(dLdaB).flatten()
+        dLdaA = - np.array(dLdaA).flatten()
+        dLdaB = - np.array(dLdaB).flatten()
         dLdb = np.array(dLdb).flatten()
         # print(dLda)
         res = np.concat((dLdc,dLdaA,dLdaB,dLdb))
@@ -78,22 +78,22 @@ class Arbbin(Model): # Fix D
         return super().get_params()
     def update_params(self, grad, lr):
         # Initialize index tracker
-        grad = -grad
+        # grad = -grad
         idx = 0
 
         # Update self.c parameters
-        self.c -= lr * grad[idx : idx + self.c.size]
+        self.c += lr * grad[idx : idx + self.c.size]
         idx += self.c.size
 
         # Extract and reshape gradients for aA
-        self.aA -= lr * grad[idx : idx + self.aA.size].reshape(self.aA.shape)
+        self.aA +=  lr * grad[idx : idx + self.aA.size].reshape(self.aA.shape)
         idx += self.aA.size
 
         # Extract and reshape gradients for aB
-        self.aB -= lr * grad[idx : idx + self.aB.size].reshape(self.aB.shape)
+        self.aB +=  lr * grad[idx : idx + self.aB.size].reshape(self.aB.shape)
         
         idx += self.aB.size
-        self.b -= - lr * grad[idx : ]
+        self.b +=  lr * grad[idx : ]
 
     
     

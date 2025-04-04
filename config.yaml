@@ -1,5 +1,5 @@
 
-name: "flipped_Grads_naive_fixed_terminate_b_also_with_flipped_b_sign"
+name: "Should_be_corr_but_b_could_b_wrong"
 
 wandb_mode: "online"
 
