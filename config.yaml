@@ -1,5 +1,5 @@
 
-name: "test_with_random_init_flipped_all_nn_larger_window"
+name: "test_with_expected_ep_reward_naive"
 
 wandb_mode: "online"
 
@@ -23,7 +23,7 @@ critic:
   eps: 0.1
 
 actor:
-  nn_sample: True
+  nn_sample: False
   lr: 0.01
   beta: 0.5
   sample: False

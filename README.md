@@ -58,4 +58,6 @@
  - Increasing pf in gym model only seems to give lower reward, might point to that its not learning to improve
   - Made an error in the plotting so that it was looking like it was improving :( 
  - Finds optimal solution then gets stuck just doing a rollout of all 0s and then a single move, which is prob why the episodic rewards come so rarely
+ - Explicit solution can be wrong due to a too "long" problem can be infeasible
+ - Smooth episodic reward actually shows the transition, smoothing in wandb doesnt show this
  
