@@ -67,11 +67,11 @@ class Arbbin(Model): # Fix D
             dLdaB.append(ineq_duals[i]*x_t)
             dLdb.append(ineq_duals[i])
         dLdc = np.array(dLdc).flatten()
-        dLdaA = - np.array(dLdaA).flatten()
-        dLdaB = - np.array(dLdaB).flatten()
+        dLdaA = np.array(dLdaA).flatten()
+        dLdaB = np.array(dLdaB).flatten()
         dLdb = np.array(dLdb).flatten()
         # print(dLda)
-        res = np.concat((dLdc,dLdaA,dLdaB,dLdb))
+        res = np.hstack((dLdc,dLdaA,dLdaB,dLdb))
 
         return res
     def get_params(self):

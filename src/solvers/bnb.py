@@ -214,6 +214,8 @@ class BranchAndBoundRevamped:
                     "x" : res.x ,
                     "eqlin" : res.eqlin.marginals,
                     "ineqlin" : res.ineqlin.marginals,
+                    "lower" : res.lower.marginals,
+                    "upper" : res.upper.marginals,
                     "fathomed" : False
 
                 }
@@ -263,6 +265,8 @@ class BranchAndBoundRevamped:
                             "x" : res.x ,
                             "eqlin" : res.eqlin.marginals,
                             "ineqlin" : res.ineqlin.marginals,
+                            "lower" : res.lower.marginals,
+                            "upper" : res.upper.marginals,
                             "fathomed" : False,
                             "conds" : conds
                         }
@@ -286,6 +290,8 @@ class BranchAndBoundRevamped:
                         "x" : res.x ,
                         "eqlin" : res.eqlin.marginals,
                         "ineqlin" : res.ineqlin.marginals,
+                        "lower" : res.lower.marginals,
+                        "upper" : res.upper.marginals,
                         "fathomed" : True,
                         "conds" : conds
                         

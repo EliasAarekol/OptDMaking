@@ -28,7 +28,7 @@ def main():
     B = np.random.randint(0,2,size = (prob_size,prob_size))
     C = np.random.uniform(0,1,size = (num_cons,prob_size))
     D = np.random.uniform(0,2,size = (num_cons,prob_size))
-    E = np.random.uniform(1,3,size = (num_cons))
+    E = np.random.uniform(5,10,size = (num_cons))
     # bounds   = [(0,1) for _ in range(len(c))]
     # bounds = [tuple(sorted((np.random.randint(-10,10),np.random.randint(0,20)))) for _ in range(len(c))]
     bounds = [(0,9) for _ in range(len(c))]
@@ -104,6 +104,7 @@ def main():
                 ep_reward = 0
                 fathomed_counter = 0
                 obs,_ = gym_model.reset()
+                # print(obs)
             state = obs
         ep_rewards_per_p.append(ep_reward_per_p)
         ep_reward_per_p = 0

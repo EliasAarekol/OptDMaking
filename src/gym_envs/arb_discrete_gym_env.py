@@ -21,8 +21,10 @@ class Arb_binary(gym.Env):
     def reset(self,seed = None):
         super().reset(seed  = seed)
 
-        # self.state = self.observation_space.sample(mask = np.zeros((self.A.shape[1],)).astype(np.int8))
-        self.state = np.zeros((self.A.shape[1]))
+        self.state = self.observation_space.sample()
+        while np.any(self.C @ self.state >= self.E):
+            self.state = self.observation_space.sample()
+        # self.state = np.zeros((self.A.shape[1]))
 
         return self.state,None
     
@@ -54,7 +56,7 @@ class Arb_binary(gym.Env):
         #     terminated = True
         if not self.observation_space.contains(nxt_state):
             terminated = True
-            # nxt_state = np.zeros((self.A.shape[1]))
+            nxt_state,_ = self.reset()
         
         old_state = int(''.join(map(str, self.state.astype(int))))
 

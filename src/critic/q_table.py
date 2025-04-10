@@ -11,7 +11,7 @@ class Q_table(Critic):
 
 
     def train(self,rewards,actions,states,nxt_states):
-        self.table = q.train_q_table(self.table,rewards,self.lr,self.df,actions,states,nxt_states,self.eps)
+        self.table = q.train_q_table(self.table,rewards,self.lr,self.df,actions,states,nxt_states,self.eps,mode = 1)
         return self.table
     
     def evaluate(self, actions, states):

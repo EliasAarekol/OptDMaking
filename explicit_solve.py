@@ -18,9 +18,10 @@ A = np.random.randint(0,2,size = (prob_size,prob_size))
 B = np.random.randint(0,2,size = (prob_size,prob_size))
 D = np.random.uniform(0,1,size = (num_cons,prob_size))
 E = np.random.uniform(0,2,size = (num_cons,prob_size))
-F = np.random.uniform(1,3,size = (num_cons))
+F = np.random.uniform(5,10,size = (num_cons))
+# F = np.random.uniform(1,3,size = (num_cons))
 # c = - np.random.randint(0,10,size=(prob_size,))
-T = 4
+T = 7
 
 m = prob_size
 n = prob_size

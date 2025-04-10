@@ -7,6 +7,14 @@ import numpy as np
 #     return (p.cumsum(-1) >= np.random.uniform(size=p.shape[:-1])[..., None]).argmax(-1)
 
 
+def dLdx(c,A_ub,A_eq,ineq,eq,upper,lower):
+    A_ub = np.array([]) if A_ub is None else A_ub
+    A_eq = np.array([]) if A_eq is None else A_eq
+    # return c - ineq @ A_ub - eq @ A_eq - upper + lower
+
+    return c - ineq @ A_ub - eq @ A_eq - upper - lower
+
+
 
 
 class Actor:
@@ -50,6 +58,8 @@ class Actor:
         #     raise Exception(sol_pool,sol_pool2)
         if sol_pool is None:
             return None
+        # for sol in sol_pool:
+        #     print(dLdx(node["c"],node["A_ub"],node["A_eq"],sol["ineqlin"],sol["eqlin"],sol["upper"],sol["lower"]))
         # if len(sol_pool) < 2:
         #     raise Exception("Solution pool needs atleast 2 elements")
         obj_values =np.array( [sol["fun"] for sol in sol_pool])
@@ -81,7 +91,7 @@ class Actor:
         lag_grads = [self.model.lagrange_gradient(a,new_state,eq_marg,ineq_marg) for a,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
 
         # Convert action solution to actual action
-
+        lag_grads = np.array(lag_grads)
         lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])
         # Compute policy sensitivity
         self.nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)

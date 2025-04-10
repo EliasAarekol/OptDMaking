@@ -1,5 +1,5 @@
 
-name: "Should_be_corr_but_b_could_b_wrong"
+name: "test_with_random_init_flipped_all_nn_larger_window"
 
 wandb_mode: "online"
 
@@ -15,15 +15,15 @@ gym:
   pf: 1
 
 plotting:
-  window_size: 100
+  window_size: 500
 
 critic:
-  lr: 0.01
+  lr: 0.1
   df: 0.9
-  eps: 0.01
+  eps: 0.1
 
 actor:
-  nn_sample: False
+  nn_sample: True
   lr: 0.01
   beta: 0.5
   sample: False
