@@ -57,7 +57,7 @@ class Arb_binary(gym.Env):
         if not self.observation_space.contains(nxt_state):
             terminated = True
             # nxt_state,_ = self.reset()
-            nxt_state = np.array([8,8,8])
+            nxt_state = np.array([9,9,8])
         
         old_state = int(''.join(map(str, self.state.astype(int))))
 

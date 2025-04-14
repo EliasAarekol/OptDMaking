@@ -59,7 +59,7 @@ def check_corr_grad(obj_vals,nab,beta,lag_grads,draw):
     log_pol[draw].backward() # dpi/dphi
     grad_log_pol = obj_vals_torch.grad
     expected =  grad_log_pol @ lag_grads
-    print(np.linalg.norm(nab - expected.detach().numpy()))
+    assert np.linalg.norm(nab - expected.detach().numpy()) < 1e-6
 
 
 def check_with_cvxpylayers(node,lag_grad):
@@ -71,7 +71,7 @@ def check_with_cvxpylayers(node,lag_grad):
     solver_args = {
         'max_iters': 50000,  # Increase max iterations (default is often 2500)
         # 'eps': 1e-5,      # Adjust tolerance if needed (SCS default is 1e-4)
-        'verbose': True,   # Set to True to get detailed solver output for debugging
+        # 'verbose': True,   # Set to True to get detailed solver output for debugging
         'solve_method' : 'ECOS'
     }
     lb_b = torch.tensor([bound[0] if bound[0] is not None else -1e3 for bound in node["bounds"]],dtype=torch.float64)

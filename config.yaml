@@ -31,5 +31,10 @@ actor:
 
 
 train_iters: 20
-rollout_iters: 300
+rollout_iters: 500
 total_iters: 10000
+
+
+explicit_sol_time: 4
+comp_expected: True
+comp_expected_every: 50
