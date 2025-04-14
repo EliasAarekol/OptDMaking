@@ -100,10 +100,11 @@ if __name__ == "__main__":
     np.random.seed(42)
     q_table = np.random.rand(num_actions, num_states)
     q_table2 = np.array(q_table)
+    q_table2 = np.zeros_like(q_table)
 
     # Define example rewards, learning rate, discount factor, actions, states, and next states
     rs = np.array([1.0, 0.5, -0.2])
-    lr = 0.1
+    lr = 0.01
     df = 0.9
     actions = np.array([0, 2, 1])
     states = np.array([1, 3, 4])
@@ -117,11 +118,12 @@ if __name__ == "__main__":
     q_table[actions, states] += lr * (rs + df * max_next_q - q_table[actions, states])
 
     # Print updated Q-table
-    print("\nUpdated Q-table:\n", q_table)
+    print("\nUpdated Q-table:\n")
     start = time.time()
-    q_test,_ = train_q_table(q_table2,rs,lr,df,actions,states,nxt_states,mode = 1)
-    print(time.time()-start)
-    # print()
-    # print(q_test)
+    q_test = train_q_table(q_table2,rs,lr,df,actions,states,nxt_states,mode = 1,eps = 0.00001)
+    print(rs)
+    # print(time.time()-start)
+    print()
+    print(q_test[actions,states])
     # print()
     # print(q_test-q_table2)

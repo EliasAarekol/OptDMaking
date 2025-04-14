@@ -60,4 +60,5 @@
  - Finds optimal solution then gets stuck just doing a rollout of all 0s and then a single move, which is prob why the episodic rewards come so rarely
  - Explicit solution can be wrong due to a too "long" problem can be infeasible
  - Smooth episodic reward actually shows the transition, smoothing in wandb doesnt show this
+ - What sebastien said might relate to that the naive approach isnt converging because its not the correct gradient for that action
  

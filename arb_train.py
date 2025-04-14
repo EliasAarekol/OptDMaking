@@ -32,9 +32,9 @@ def main():
     E = np.random.uniform(5,10,size = (num_cons))
     # bounds   = [(0,1) for _ in range(len(c))]
     # bounds = [tuple(sorted((np.random.randint(-10,10),np.random.randint(0,20)))) for _ in range(len(c))]
-    bounds = [(0,9) for _ in range(len(c))]
+    bounds = [(0,8) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
-    m = arb_bin.Arbbin(-c,C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"])
+    m = arb_bin.Arbbin(-np.random.uniform(0,10,size = (prob_size,)),C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"])
     gym_model = arb_discrete_gym_env.Arb_binary(c,np.zeros_like(c),A,B,C,D,E,config["gym"]["pf"])
 
     n_states = 999
@@ -77,6 +77,9 @@ def main():
     # m.update_state(init_state)
     T = 4
     fathomed_counter = 0
+    print(m.c)
+    print(gym_model.state)
+    ep_length = 0
     for _ in tqdm(range(total_iters),desc= "Total Iterations"):
 
         # c_agg,A_eq,b_eq,A_ub,b_ub = formulate_lp_with_initial_state(-c,A,B,C,D,E,T,state)
@@ -100,13 +103,21 @@ def main():
         #     for sol in sols:
         #         if sol["fun"] < best["fun"]:
         #             best = sol
-        expected_ep_reward = calc_expected_reward(c,A,B,C,D,E,T,state,solver)
+        expected_ep_reward = calc_expected_reward(-c,A,B,C,D,E,T,state,solver)
+        # expected_ep_reward = 0
             # expected_ep_reward = -best["fun"]
+        c_values = []
+        columns = ["c1", "c2", "c3"]
+        c_table = wandb.Table(columns=columns)
+
         for i in tqdm(range(rollout_iters),leave=False,desc= "Rollout"):
             action,act_info = act.act(state)
+            ep_length += 1
+
             
 
             fathomed_counter =  fathomed_counter + 1 if act_info["fathomed"] else fathomed_counter
+            nab = act_info["nab"]
             store = True
             if action is None:
                 action = np.zeros_like(state)
@@ -118,7 +129,7 @@ def main():
             # print(reward,old_state,new_state,action)
             
             if store:
-                act.update_buffers(reward,action_number,old_state,new_state)
+                act.update_buffers(reward,action_number,old_state,new_state,nab)
             model_values[new_state] = act.value_est
             ep_reward += reward
             ep_reward_per_p+=reward
@@ -126,15 +137,17 @@ def main():
             if terminated or i == rollout_iters-1:
                 ep_rewards.append(ep_reward)
 
-                metric = {"ep_reward" : ep_reward , "fathomed_counter" : fathomed_counter, "expected_ep_reward" : expected_ep_reward}
+
+                metric = {"ep_reward" : ep_reward , "fathomed_counter" : fathomed_counter, "expected_ep_reward" : expected_ep_reward, "ep_length" : ep_length}
                 if len(ep_rewards) % window_size == 0:
                     metric["smooth_ep_reward"] = sum(ep_rewards[-window_size:])/window_size
                 run.log(metric)
                 ep_reward = 0
                 fathomed_counter = 0
+                ep_length = 0
                 state,_ = gym_model.reset()
                 print(state)
-                expected_ep_reward = calc_expected_reward(c,A,B,C,D,E,T,state,solver)
+                expected_ep_reward = calc_expected_reward(-c,A,B,C,D,E,T,state,solver)
 
                 # c_agg,A_eq,b_eq,A_ub,b_ub = formulate_lp_with_initial_state(-c,A,B,C,D,E,T,state)
     
@@ -165,6 +178,8 @@ def main():
         ep_rewards_per_p.append(ep_reward_per_p)
         ep_reward_per_p = 0
         act.train(iters = training_iters,sample = config["actor"]["sample"],num_samples=config["actor"]["num_samples"])
+        c_table.add_data(*m.c)
+        run.log({"c_values" : c_table})
         c_diff = ((-c -m.c )**2).mean()
         aA_change = np.sum((aA-m.aA)**2 )
         aB_change = np.sum((aB-m.aB)**2)

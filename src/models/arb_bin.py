@@ -51,9 +51,6 @@ class Arbbin(Model): # Fix D
             "b_eq" :  b_eq,
             "bounds" : bounds,
             "integer" : integer,
-            "parent" : None,
-            "children" : [],
-            "sol" : None
         }
         return node 
         
@@ -66,10 +63,10 @@ class Arbbin(Model): # Fix D
             dLdaA.append(ineq_duals[i]*state)
             dLdaB.append(ineq_duals[i]*x_t)
             dLdb.append(ineq_duals[i])
-        dLdc = np.array(dLdc).flatten()
-        dLdaA = np.array(dLdaA).flatten()
-        dLdaB = np.array(dLdaB).flatten()
-        dLdb = np.array(dLdb).flatten()
+        dLdc = np.array(dLdc).flatten() # should be neg
+        dLdaA = -np.array(dLdaA).flatten()
+        dLdaB = -np.array(dLdaB).flatten()
+        dLdb = -np.array(dLdb).flatten()
         # print(dLda)
         res = np.hstack((dLdc,dLdaA,dLdaB,dLdb))
 
@@ -78,18 +75,19 @@ class Arbbin(Model): # Fix D
         return super().get_params()
     def update_params(self, grad, lr):
         # Initialize index tracker
-        # grad = -grad
+        grad = -grad
+        # grad = 0
         idx = 0
 
-        # Update self.c parameters
+        # # Update self.c parameters
         self.c += lr * grad[idx : idx + self.c.size]
         idx += self.c.size
 
-        # Extract and reshape gradients for aA
+        # # Extract and reshape gradients for aA
         self.aA +=  lr * grad[idx : idx + self.aA.size].reshape(self.aA.shape)
         idx += self.aA.size
 
-        # Extract and reshape gradients for aB
+        # # Extract and reshape gradients for aB
         self.aB +=  lr * grad[idx : idx + self.aB.size].reshape(self.aB.shape)
         
         idx += self.aB.size

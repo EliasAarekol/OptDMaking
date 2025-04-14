@@ -1,5 +1,5 @@
 
-name: "test_with_expected_ep_reward_naive"
+name: "flipped_grad"
 
 wandb_mode: "online"
 
@@ -23,7 +23,7 @@ critic:
   eps: 0.1
 
 actor:
-  nn_sample: False
+  nn_sample: True
   lr: 0.01
   beta: 0.5
   sample: False

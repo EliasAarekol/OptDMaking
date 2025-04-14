@@ -13,7 +13,7 @@ class Arb_binary(gym.Env):
         self.pf = pf
         self.p = p
         self.observation_space = gym.spaces.MultiDiscrete(9 * np.ones((A.shape[1],)))
-        self.action_space = gym.spaces.MultiDiscrete(100 * np.ones((A.shape[1],)))
+        self.action_space = gym.spaces.MultiDiscrete(9 * np.ones((A.shape[1],)))
         self.state = None
         
     def _get_obs(self):
@@ -56,7 +56,8 @@ class Arb_binary(gym.Env):
         #     terminated = True
         if not self.observation_space.contains(nxt_state):
             terminated = True
-            nxt_state,_ = self.reset()
+            # nxt_state,_ = self.reset()
+            nxt_state = np.array([8,8,8])
         
         old_state = int(''.join(map(str, self.state.astype(int))))
 
@@ -72,6 +73,7 @@ class Arb_binary(gym.Env):
         "new_state" : new_state
         }
         
+        reward = -reward
      
         return self.state,reward,terminated,False,info
     
