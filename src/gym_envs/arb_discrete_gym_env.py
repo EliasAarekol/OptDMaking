@@ -28,13 +28,18 @@ class Arb_binary(gym.Env):
 
         return self.state,None
     
-    def step(self,action):
+    def step(self,action,gen_noise = False):
         if not self.action_space.contains(action):
             print(action)
             print(self.A.shape)
             raise Exception("Action does not belong to action space")
         # Noise = ...
-        nxt_state = self.A @ self.state + self.B @ action # + noise
+        noise = np.zeros_like(self.state)
+        if np.random.uniform() > 0.75 and gen_noise:
+            noise[0] = 1
+            noise = np.random.permutation(noise)
+            
+        nxt_state = self.A @ self.state + self.B @ action + noise
         slack =  self.C @ self.state + self.D @ action - self.E
         
         reward = self.c @ action + self.p @ nxt_state
@@ -74,6 +79,8 @@ class Arb_binary(gym.Env):
         }
         
         reward = -reward
+        # if reward > 0:
+        #     print("sds")
      
         return self.state,reward,terminated,False,info
     

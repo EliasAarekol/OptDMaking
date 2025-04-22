@@ -40,14 +40,14 @@ def q_update(q_table, rs , lr,df,actions,states,nxt_states):
         q_table[action,state] = q_table[action,state]  + lr*(r+df*np.max(q_table,axis=0)[nxt_state] - q_table[action,state]  )
     return q_table
 
-def q_update_vec(q_table, rs , lr,df,actions,states,nxt_states):
+def q_update_vec(target_q_table,q_table, rs , lr,df,actions,states,nxt_states):
     q_table = q_table.copy()
-    max_next_q = np.max(q_table[:, nxt_states], axis=0)  # Get max Q-value for next states
+    max_next_q = np.max(target_q_table[:, nxt_states], axis=0)  # Get max Q-value for next states
     q_table[actions, states] += lr * (rs + df * max_next_q - q_table[actions, states])
     return q_table
     
 
-def train_q_table(q_table,rs,lr,df,actions,states,nxt_states,eps = 1e-3,mode = 0):
+def train_q_table(target_q_table,q_table,rs,lr,df,actions,states,nxt_states,eps = 1e-3,mode = 0):
     """_summary_
 
     Args:
@@ -73,7 +73,7 @@ def train_q_table(q_table,rs,lr,df,actions,states,nxt_states,eps = 1e-3,mode = 0
     while diff > eps:
         old = new
         if mode == 1:
-            new = q_update_vec(old,rs,lr,df,actions,states,nxt_states)
+            new = q_update_vec(target_q_table,old,rs,lr,df,actions,states,nxt_states)
         elif mode == 0:
             new = q_update(old,rs,lr,df,actions,states,nxt_states)
             

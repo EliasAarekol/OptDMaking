@@ -190,7 +190,7 @@ def main():
         data["aA"] = m.aA.tolist()
         data["aB"] = m.aB.tolist()
         data["b"] = m.b.tolist()
-        with open('params.yaml','w') as f:
+        with open(f'params/{run.id}.yaml','w') as f:
             yaml.dump(data,f)
         # q = act.q_table
         # print(m.w)

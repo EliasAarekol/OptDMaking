@@ -1,9 +1,12 @@
 
-name: "flipped_grad"
+name: "7 pieces restart,no noise, true_nab"
 
 wandb_mode: "online"
 
 numpy_seed: 5
+
+load: True
+load_path: 'params/k4g2v0ol.yaml'
 
 model:
   prob_size: 3
@@ -13,6 +16,7 @@ model:
 
 gym:
   pf: 1
+  gen_noise: False
 
 plotting:
   window_size: 500
@@ -23,18 +27,18 @@ critic:
   eps: 0.1
 
 actor:
-  nn_sample: True
+  nn_sample: False
   lr: 0.01
-  beta: 0.5
+  beta: 0.05
   sample: False
   num_samples: 0.5
 
 
 train_iters: 20
 rollout_iters: 500
-total_iters: 10000
+total_iters: 100000
 
 
 explicit_sol_time: 4
-comp_expected: True
+comp_expected: False
 comp_expected_every: 50

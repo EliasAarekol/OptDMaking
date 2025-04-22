@@ -437,7 +437,7 @@ def formulate_milp_with_relaxation(c, A, B, D, E, F, T, s_initial, penalty_facto
     return c_agg, A_eq, b_eq, A_ub, b_ub, N_dims, integrality, bounds
 
 
-c_agg_2,A_eq_2,b_eq_2,A_ub_2,b_ub_2,_,integer,bounds = formulate_milp_with_relaxation(c,A,B,D,E,F,4,np.array([6,2,1]),0)
+c_agg_2,A_eq_2,b_eq_2,A_ub_2,b_ub_2,_,integer,bounds = formulate_milp_with_relaxation(c,A,B,D,E,F,3,np.array([6,2,1]),0)
 
 from time import time
 # bounds = [(0,9) for _ in range(A_ub_2.shape[1])]
@@ -454,8 +454,8 @@ node = {
     "bounds" : bounds,
     "integer" : integer,
 }
-
-print(A_ub_2)
+res = A @ np.array([6,2,1]) + B @ np.array([0,1,0])
+print("res",res)
 
 sols = solver.solve(node)
 

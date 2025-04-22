@@ -61,4 +61,12 @@
  - Explicit solution can be wrong due to a too "long" problem can be infeasible
  - Smooth episodic reward actually shows the transition, smoothing in wandb doesnt show this
  - What sebastien said might relate to that the naive approach isnt converging because its not the correct gradient for that action
- 
+ - Correct gradient seems to work when i fixed the sampling a bit (let the lag grad be calculated using the chosen sol action not the sampled one)
+ - I think corr gradient works now but a remaining problem is still that you cant actually guarantee that we get enough exploration. We might just only have one fathomed branch, and 
+ - What i'm doing with the storing of conditons is really stupid, i should just store the bounds and propagate them. They are the only things that change.
+  - Can then use this for the cvxpy check
+  - CVXPY check takes 2/3 of act time
+  - If the cvxpy disagrees its often that its orthogonal, which i think has something do to with active constraints
+  - When fixing a bound some constraints might not be active anymore and some might become active, which could also cause the discrepancy
+  - As i've seen sometimes they disagree but its hard to say if its numerical or because of "new constraint"
+    - I think it has to be because of the "new constraint" but i cant explain why only one constraint seems to be active at a time, i would think that both were

@@ -11,8 +11,8 @@ import wandb
 from src import actor
 import yaml
 from scipy.sparse import lil_matrix, hstack, vstack, identity, block_diag, csr_matrix
-
-
+# import cProfile
+# from pstats import Stats
 def main():
     config = yaml.safe_load(open('config.yaml'))
 
@@ -33,12 +33,31 @@ def main():
     E = np.random.uniform(5,10,size = (num_cons))
     bounds = [(0,8) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
-
-    # Init solver and gym model
-
+    c_model =  -np.random.uniform(0,10,size = (prob_size,))
+    
+    # aA =np.vstack((aA,np.random.uniform(0,0.1,size = (2,prob_size)))) 
+                  
+    # aB =np.vstack((aB,np.random.uniform(0,0.1,size = (2,prob_size))) )
+    # # Init solver and gym model
+    # b = np.hstack((b,np.random.uniform(0,.1,size=(2,))))
+    load = config["load"]
+    if load:
+        print("loading params instead of generating random...")
+        params = yaml.safe_load(open(config["load_path"]))
+        aA = np.array(params['aA'])
+        aB = np.array(params['aB'])
+        c_model = np.array(params['c'])
+        b = np.array(params['b'])
+        
+    
     m = arb_bin.Arbbin(
-        -np.random.uniform(0,10,size = (prob_size,)),C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"]
+        c_model,C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"]
         )
+
+
+    # m = arb_bin.Arbbin(
+    #     -np.array([20,0.1,0.2]),C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"]
+    #     )
     gym_model = arb_discrete_gym_env.Arb_binary(c,np.zeros_like(c),A,B,C,D,E,config["gym"]["pf"])
     m.update_state(gym_model.reset(0)[0])
 
@@ -108,7 +127,7 @@ def main():
             if action is None:
                 action = np.zeros_like(state)
                 store = False
-            state,reward,terminated,_,info = gym_model.step(action)
+            state,reward,terminated,_,info = gym_model.step(action,config["gym"]["gen_noise"])
             action_number = info["action"]
             old_state = info["old_state"]
             new_state = info["new_state"]
@@ -117,7 +136,7 @@ def main():
                 act.update_buffers(reward,action_number,old_state,new_state,nab)
 
             ep_reward += reward
-            run.log({"reward" : reward, "action" : action_number})
+            run.log({"reward" : reward, "action" : action_number, "n_sols" : act_info["n_sols"]})
 
 
             # rewards.append(reward)
@@ -156,32 +175,33 @@ def main():
                     metric["smooth_ep_reward"] = sum(ep_rewards[-window_size:])/window_size
                 if comp_expected and expected_ep_reward is not None:
                     metric["expected_ep_reward"] = expected_ep_reward
+                    metric["distance_from_opt_pol"] = expected_ep_reward - ep_reward
                     expected_ep_reward = None
                 run.log(metric)
                 ep_reward = 0
                 fathomed_counter = 0
                 ep_length = 0
                 state,_ = gym_model.reset()
-                if  last_calced > comp_expected_every and comp_expected:
+                if last_calced > comp_expected_every and comp_expected:
                     expected_ep_reward = calc_expected_reward(-c,A,B,C,D,E,T,state,solver)
                     last_calced = 0
 
 
-        act.train(iters = training_iters,sample = config["actor"]["sample"],num_samples=config["actor"]["num_samples"])
+        pol_grad = act.train(iters = training_iters,sample = config["actor"]["sample"],num_samples=config["actor"]["num_samples"])
         c_table.add_data(*m.c)
         run.log({"c_values" : c_table})
         c_diff = ((-c -m.c )**2).mean()
         aA_change = np.sum((aA-m.aA)**2 )
         aB_change = np.sum((aB-m.aB)**2)
         b_change = np.sum((b-m.b)**2)
-        run.log({"c_diff" : c_diff , "aA_change" : aA_change , "aB_change" : aB_change, "b_change" : b_change})
-        # data = {}
-        # data["c"] = m.c.tolist()
-        # data["aA"] = m.aA.tolist()
-        # data["aB"] = m.aB.tolist()
-        # data["b"] = m.b.tolist()
-        # with open('params.yaml','w') as f:
-        #     yaml.dump(data,f)
+        run.log({"c_diff" : c_diff , "aA_change" : aA_change , "aB_change" : aB_change, "b_change" : b_change,"pol_grad": np.linalg.norm(pol_grad)})
+        data = {}
+        data["c"] = m.c.tolist()
+        data["aA"] = m.aA.tolist()
+        data["aB"] = m.aB.tolist()
+        data["b"] = m.b.tolist()
+        with open(f'params/{run.id}.yaml','w') as f:
+            yaml.dump(data,f)
 
     
 
@@ -327,5 +347,10 @@ def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 if __name__ == "__main__":
+    # pr = cProfile.Profile()
+    # pr.enable()
     main()
-    # print(timeit.timeit(main),number = 1)
+    # pr.disable()
+    # stats = Stats(pr)
+    # stats.sort_stats('cumtime').print_stats(20)
+    # # cProfile.run("main()k",sort = "time")

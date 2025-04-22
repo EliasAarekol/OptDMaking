@@ -217,7 +217,8 @@ class BranchAndBoundRevamped:
                     "lower" : res.lower.marginals,
                     "upper" : res.upper.marginals,
                     "fathomed" : False,
-                    "node" : init_node
+                    "node" : init_node,
+                    "bounds" : init_node["bounds"]
 
                 }
                 
@@ -270,7 +271,8 @@ class BranchAndBoundRevamped:
                             "upper" : res.upper.marginals,
                             "fathomed" : False,
                             "conds" : conds,
-                            "node" : node
+                            "node" : node,
+                            "bounds" : bounds
                         }
                         
                     )
@@ -296,7 +298,9 @@ class BranchAndBoundRevamped:
                         "upper" : res.upper.marginals,
                         "fathomed" : True,
                         "conds" : conds,
-                        "node" : node
+                        "node" : node,
+                        "bounds" : bounds
+
                         
                         
                     }
