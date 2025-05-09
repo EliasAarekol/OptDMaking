@@ -136,7 +136,7 @@ def check_with_cvxpylayers(node,bounds,lag_grad,drawn_x,state):
 
 
 class Actor:
-    def __init__(self,model,solver,critic,beta = 1,lr = 0.01,df = 0.9,nn_sample = False,q_table = None):
+    def __init__(self,model,solver,critic,beta = 1,lr = 0.01,df = 0.9,nn_sample = False,sampled_grad = False):
         self.model = model
         # self.solver = bruteForceSolveMILP if solver == "brute" else BranchAndBound # Fix this
 
@@ -157,7 +157,8 @@ class Actor:
         self.critic = critic
         self.value_est = 0
         self.nn_sample = nn_sample
-        self.q_table = q_table
+        self.sampled_grad = sampled_grad
+        # self.q_table = q_table
         self.m = 0
         self.v = 0
         self.reset_critic_iter = 0
@@ -215,16 +216,21 @@ class Actor:
 
 
         # Compute model specific gradient
+
         actions = [sol["x"][self.desc_vars] for sol in sol_pool]
         ineq_margs = [np.array(sol["ineqlin"]) for sol in sol_pool] # negative signs here could be wrong
         eq_margs = [np.array(sol["eqlin"]) for sol in sol_pool] #negative signs here could be wrong
         lag_grads = [self.model.lagrange_gradient(a,new_state,eq_marg,ineq_marg) for a,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
 
         # Convert action solution to actual action
-        # lag_grad_action_drawn = self.model.lagrange_gradient(action['x'][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
-        # lag_grads[draw] = lag_grad_action_drawn
-        lag_grads = np.array(lag_grads)
+        # lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])
+        if self.sampled_grad:
+            node["bounds"] = bounds
+            ineq,eq = calc_actual_grad(node)
+            lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,ineq,eq)
+            lag_grads[draw] = lag_grad_action_draw            
         # lag_grad_action_drawn = self.model.lagrange_gradient(chosen_sol["x"][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
+        lag_grads = np.array(lag_grads)
         # Compute policy sensitivity
         lag_grad_action_drawn = lag_grads[draw]
         # old_nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
@@ -243,9 +249,7 @@ class Actor:
         # t_nab= nabla_log_pi_stable(true_grads[draw],obj_values,true_grads,self.beta)
         t_nab = 0
         # Check with actual grad
-        # node["bounds"] = bounds
-        # ineq,eq = calc_actual_grad(node)
-        # lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,ineq,eq)
+
         # lag_grads[draw] = lag_grad_action_drawn
         # lag_grads = np.array(lag_grads)
         # lag_grad_action_drawn = self.model.lagrange_gradient(chosen_sol["x"][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
@@ -268,7 +272,7 @@ class Actor:
         size = len(self.buffer.rewards)
         self.reset_critic_iter+=1
         if self.reset_critic_iter == 1:
-            self.critic.reset()
+            # self.critic.reset()
             self.reset_critic_iter = 0
         if size == 0:
             raise Exception("Buffers are empty")
@@ -299,8 +303,9 @@ class Actor:
 
 
             # self.critic.train()
-            qualities = self.critic.evaluate(actions,states)
+            qualities = self.critic.evaluate(actions,states,rewards,nxt_states)
             # qualities_q_table = self.q_table.evaluate(actions,states)
+            
             if np.all(qualities == 0):
                 print("whaa")
 

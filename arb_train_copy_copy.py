@@ -2,7 +2,7 @@
 import numpy as np
 from src.models import arb_bin
 from src.gym_envs import arb_binary_gym_env ,arb_discrete_gym_env,arb_cont_state_disc_action
-from src.critic import q_network,q_table
+from src.critic import q_network,q_table,gae
 from src.solvers import bnb
 import matplotlib.pyplot as plt
 from time import time
@@ -87,10 +87,13 @@ def main():
     n_actions = action_ub*(100+10+1)+1
     # q = np.zeros((n_actions,n_states))
     # q_critic = q_table.Q_table(q,critic_lr,df,config["critic"]["eps"])
-    dims = [state_size,128,128,n_actions]
-    critic = q_network.Q_network(dims,critic_lr,df,eps,0.1,config['device'])
+    # dims = [state_size,128,128,n_actions]
+    dims = [state_size,128,128,1]
+    # critic = q_network.Q_network(dims,critic_lr,df,eps,0.1,config['device'])
+    critic = gae.GAE(dims,critic_lr,df,eps,0.1,config['device'])
+    
     solver = bnb.BranchAndBoundRevamped()
-    act = actor.Actor(m,solver,critic,beta = beta,lr = act_lr,df = df,nn_sample = config["actor"]["nn_sample"],q_table = None)
+    act = actor.Actor(m,solver,critic,beta = beta,lr = act_lr,df = df,nn_sample = config["actor"]["nn_sample"],sampled_grad = config["actor"]["sampled_grad"])
     state = gym_model.state
 
 
@@ -102,7 +105,7 @@ def main():
 
     ep_reward =0
     ep_rewards = []
-
+    rewards = []
 
 
     T = config["explicit_sol_time"]
@@ -151,6 +154,7 @@ def main():
                 act.update_buffers(reward,action_number,old_state,new_state,nab,t_nab)
 
             ep_reward += reward
+            # reward.append(reward)
             run.log({"reward" : reward, "action" : action_number, "n_sols" : act_info["n_sols"]})
 
 
@@ -179,7 +183,6 @@ def main():
                 ep_rewards.append(ep_reward)
                 # fathoms.append(fathomed_counter)
                 # ep_lengths.append(ep_length)
-    
                 metric = {
                     "ep_reward" : ep_reward,
                     "fathomed_counter" : fathomed_counter,

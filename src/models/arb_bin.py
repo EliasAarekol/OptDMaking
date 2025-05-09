@@ -80,7 +80,7 @@ class Arbbin(Model): # Fix D
         idx = 0
 
         # # Update self.c parameters
-        self.c += lr * grad[idx : idx + self.c.size]
+        # self.c += lr * grad[idx : idx + self.c.size]
         idx += self.c.size
 
         # # Extract and reshape gradients for aA

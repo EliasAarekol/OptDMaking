@@ -1,9 +1,9 @@
 
-name: "neg_grad"
+name: "c known seed_1 naive at sample grad proper"
 
 wandb_mode: "online"
 
-numpy_seed: 16
+numpy_seed: 3
 
 load: False
 load_path: 'params/k4g2v0ol.yaml'
@@ -31,15 +31,16 @@ critic:
   eps: 0.01
 
 actor:
+  sampled_grad: True
   nn_sample: False
   lr: 0.01
   beta: 0.05
-  sample: True
+  sample: False
   num_samples: 0.3
 
 
 train_iters: 20
-rollout_iters: 500
+rollout_iters: 1000
 total_iters: 100000
 
 
