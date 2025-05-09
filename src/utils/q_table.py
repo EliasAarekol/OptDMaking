@@ -37,7 +37,12 @@ def q_update(q_table, rs , lr,df,actions,states,nxt_states):
     """
     q_table = q_table.copy()
     for r,action,state,nxt_state in zip(rs,actions,states,nxt_states):
-        q_table[action,state] = q_table[action,state]  + lr*(r+df*np.max(q_table,axis=0)[nxt_state] - q_table[action,state]  )
+        state = np.round(state).astype(int)
+        if all(nxt_state == -1):
+            q_table[action,state] = r
+        else:
+            nxt_state = np.round(nxt_state).numpy().astype(int)
+            q_table[action,state] = q_table[action,state]  + lr*(r+df*np.max(q_table,axis=0)[nxt_state] - q_table[action,state]  )
     return q_table
 
 def q_update_vec(target_q_table,q_table, rs , lr,df,actions,states,nxt_states):

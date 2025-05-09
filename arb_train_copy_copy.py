@@ -2,7 +2,7 @@
 import numpy as np
 from src.models import arb_bin
 from src.gym_envs import arb_binary_gym_env ,arb_discrete_gym_env,arb_cont_state_disc_action
-from src.critic import q_table
+from src.critic import q_network,q_table
 from src.solvers import bnb
 import matplotlib.pyplot as plt
 from time import time
@@ -17,33 +17,40 @@ def main():
     config = yaml.safe_load(open('config.yaml'))
 
     # Init problem
-    prob_size = config["model"]["prob_size"]
+    state_size = config["model"]["state_size"]
+    action_size = config["model"]["action_size"]
     np.random.seed(config["numpy_seed"])
     num_cons = config["model"]["n_cons"]
     num_pieces = config["model"]["n_value_func"]
-    aA = np.random.uniform(0,0.1,size = (num_pieces,prob_size))
-    aB = np.random.uniform(0,0.1,size = (num_pieces,prob_size))
+    aA = np.random.uniform(0,0.1,size = (num_pieces,state_size))
+    aB = np.random.uniform(0,0.1,size = (num_pieces,action_size))
     b = np.random.uniform(0,.1,size=(num_pieces,))
-    c = np.random.randint(0,10,size=(prob_size,))
-    state = np.random.randint(2,size = prob_size)
-    A = np.random.randint(0,2,size = (prob_size,prob_size))
-    B = np.random.randint(0,2,size = (prob_size,prob_size))
+    c = np.random.uniform(0,10,size=(action_size,))
+    state = np.random.randint(2,size = state_size)
+    # A = np.random.randint(0,2,size = (prob_size,prob_size))
+    # B = np.random.randint(0,2,size = (prob_size,prob_size))
 
-    C = np.random.uniform(0,1,size = (num_cons,prob_size))
-    D = np.random.uniform(0,2,size = (num_cons,prob_size))
-    E = np.random.uniform(10,15,size = (num_cons))
-    bounds = [(0,8) for _ in range(len(c))]
+    # A = np.random.randint(-1,2,size = (prob_size,prob_size))
+    # B = np.random.randint(-1,2,size = (prob_size,prob_size))
+
+    C = np.random.uniform(0,1,size = (num_cons,state_size))
+    D = np.random.uniform(0,1,size = (num_cons,action_size))
+    E = np.random.uniform(10,20,size = (num_cons))
+    action_ub = 8
+    
+    bounds = [(0,action_ub) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
-    c_model =  -np.random.uniform(0,10,size = (prob_size,))
+    # c_model =  -np.random.uniform(0,10,size = (prob_size,))
+    # c_model =-np.random.normal(20,10,size = (prob_size,))
+    c_model = np.array(-c)
+    A = np.random.uniform(-1,1,size = (state_size,state_size))
+    B = np.random.uniform(-1,1,size = (state_size,action_size))
     
-    # A = np.random.uniform(0,1,size = (prob_size,prob_size))
-    # B = np.random.uniform(0,1,size = (prob_size,prob_size))
-    
-    # aA =np.vstack((aA,np.random.uniform(0,0.1,size = (2,prob_size)))) 
+    aA =np.vstack((aA,np.random.uniform(0,0.1,size = (5,state_size)))) 
                   
-    # aB =np.vstack((aB,np.random.uniform(0,0.1,size = (2,prob_size))) )
+    aB =np.vstack((aB,np.random.uniform(0,0.1,size = (5,action_size))) )
     # # Init solver and gym model
-    # b = np.hstack((b,np.random.uniform(0,.1,size=(2,))))
+    b = np.hstack((b,np.random.uniform(0,.1,size=(5,))))
     load = config["load"]
     if load:
         print("loading params instead of generating random...")
@@ -62,7 +69,7 @@ def main():
     # m = arb_bin.Arbbin(
     #     -np.array([20,0.1,0.2]),C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"]
     #     )
-    gym_model = arb_discrete_gym_env.Arb_binary(c,np.zeros_like(c),A,B,C,D,E,config["gym"]["pf"])
+    gym_model = arb_cont_state_disc_action.Arb_binary(c,np.zeros_like(state),A,B,C,D,E,config["gym"]["pf"],a_space_size=9,std = config["gym"]["noise_std"])
     m.update_state(gym_model.reset(0)[0])
 
     run = wandb.init(name = config["name"],mode = config["wandb_mode"],config = config)
@@ -74,13 +81,16 @@ def main():
     critic_lr = config["critic"]["lr"]
     df = config["critic"]["df"]
     beta = config["actor"]["beta"]
+    eps = config["critic"]["eps"]
 
-    n_states = 999
-    n_actions = 999
-    q = np.zeros((n_actions,n_states))
-    critic = q_table.Q_table(q,critic_lr,df,config["critic"]["eps"])
+    # n_states = 999
+    n_actions = action_ub*(100+10+1)+1
+    # q = np.zeros((n_actions,n_states))
+    # q_critic = q_table.Q_table(q,critic_lr,df,config["critic"]["eps"])
+    dims = [state_size,128,128,n_actions]
+    critic = q_network.Q_network(dims,critic_lr,df,eps,0.1,config['device'])
     solver = bnb.BranchAndBoundRevamped()
-    act = actor.Actor(m,solver,critic,beta = beta,lr = act_lr,df = df,nn_sample = config["actor"]["nn_sample"])
+    act = actor.Actor(m,solver,critic,beta = beta,lr = act_lr,df = df,nn_sample = config["actor"]["nn_sample"],q_table = None)
     state = gym_model.state
 
 
@@ -127,17 +137,18 @@ def main():
 
             fathomed_counter =  fathomed_counter + 1 if act_info["fathomed"] else fathomed_counter
             nab = act_info["nab"]
+            t_nab = act_info["t_nab"]
             store = True
             if action is None:
                 action = np.zeros_like(state)
                 store = False
-            state,reward,terminated,_,info = gym_model.step(action,config["gym"]["gen_noise"])
+            state,reward,terminated,_,info = gym_model.step(action)
             action_number = info["action"]
             old_state = info["old_state"]
             new_state = info["new_state"]
             
             if store:
-                act.update_buffers(reward,action_number,old_state,new_state,nab)
+                act.update_buffers(reward,action_number,old_state,new_state,nab,t_nab)
 
             ep_reward += reward
             run.log({"reward" : reward, "action" : action_number, "n_sols" : act_info["n_sols"]})
@@ -175,8 +186,9 @@ def main():
                     "ep_length" : ep_length
                           }
                 
-                if len(ep_rewards) % window_size == 0:
+                if len(ep_rewards) == window_size:
                     metric["smooth_ep_reward"] = sum(ep_rewards[-window_size:])/window_size
+                    ep_rewards = []
                 if comp_expected and expected_ep_reward is not None:
                     metric["expected_ep_reward"] = expected_ep_reward
                     metric["distance_from_opt_pol"] = expected_ep_reward - ep_reward
@@ -192,8 +204,8 @@ def main():
 
 
         pol_grad = act.train(iters = training_iters,sample = config["actor"]["sample"],num_samples=config["actor"]["num_samples"])
-        c_table.add_data(*m.c)
-        run.log({"c_values" : c_table})
+        # c_table.add_data(*m.c)
+        # run.log({"c_values" : c_table})
         c_diff = ((-c -m.c )**2).mean()
         aA_change = np.sum((aA-m.aA)**2 )
         aB_change = np.sum((aB-m.aB)**2)

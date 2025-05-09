@@ -1,4 +1,4 @@
-from src.utils.policy import policy_dist,nabla_log_pi,categorical,naive_branch_sample,nn_branch_sample,nn_branch_sample_only_keep_ints,naive_branch_sample_only_keep_ints, policy_dist_torch
+from src.utils.policy import policy_dist,nabla_log_pi,categorical,naive_branch_sample,nn_branch_sample,nn_branch_sample_only_keep_ints,naive_branch_sample_only_keep_ints, policy_dist_torch,policy_dist_np,nabla_log_pi_stable
 from src.utils.q_table import train_q_table
 from tqdm import tqdm
 import numpy as np
@@ -80,7 +80,7 @@ def check_corr_grad(obj_vals,nab,beta,lag_grads,draw): # This doesnt work with s
     assert np.linalg.norm(nab - expected.detach().numpy()) < 1e-6
 
 
-def check_with_cvxpylayers(node,bounds,lag_grad,drawn_x):
+def check_with_cvxpylayers(node,bounds,lag_grad,drawn_x,state):
     c_b = torch.tensor(node["c"],requires_grad=True)  # Objective function
 
     A_ub_b = torch.tensor(node["A_ub"], requires_grad=True)
@@ -114,14 +114,16 @@ def check_with_cvxpylayers(node,bounds,lag_grad,drawn_x):
     # assert all(torch.abs(c_b.grad[:3] - lag_grad[:3]) < 1e-3)
     if (
             not all(torch.abs(c_b.grad[:3] - lag_grad[:3]) < 1e-3)
-            or  not all(torch.abs(A_ub_b.grad[:2,:3].flatten() - lag_grad[9:15]) < 1e-3)
-            or not all(torch.abs(b_ub_b.grad[:2] + lag_grad[-2:]) < 1e-3) 
+            or  not all(torch.abs(A_ub_b.grad[:7,:3].flatten() - lag_grad[45:66]) < 1e-3)
+            or not all(torch.abs(b_ub_b.grad[:7] + lag_grad[-7:]) < 1e-3) 
+            or not all(torch.abs((b_ub_b.grad[:7].unsqueeze(0).T @ torch.tensor(state,dtype = torch.double).unsqueeze(0)).flatten() + lag_grad[3:45]) < 1e-3)
         ):
         print("CVXPY check failed with")
         print("c_b_grad is: ",c_b.grad[:3])
         print("Lag_grad is: ",lag_grad[:3])
         print("x is: ", drawn_x)
-
+    true_grad = torch.hstack((c_b.grad[:3],A_ub_b.grad[:7,:3].flatten(),-b_ub_b.grad[:7],-(b_ub_b.grad[:7].unsqueeze(0).T @ torch.tensor(state,dtype = torch.double).unsqueeze(0)).flatten()))
+    return true_grad
     
 
 
@@ -134,7 +136,7 @@ def check_with_cvxpylayers(node,bounds,lag_grad,drawn_x):
 
 
 class Actor:
-    def __init__(self,model,solver,critic,beta = 1,lr = 0.01,df = 0.9,nn_sample = False):
+    def __init__(self,model,solver,critic,beta = 1,lr = 0.01,df = 0.9,nn_sample = False,q_table = None):
         self.model = model
         # self.solver = bruteForceSolveMILP if solver == "brute" else BranchAndBound # Fix this
 
@@ -155,7 +157,10 @@ class Actor:
         self.critic = critic
         self.value_est = 0
         self.nn_sample = nn_sample
-
+        self.q_table = q_table
+        self.m = 0
+        self.v = 0
+        self.reset_critic_iter = 0
     # def init_q_table(self,q_table):
     #     self.q_table = q_table
 
@@ -172,8 +177,8 @@ class Actor:
         sol_pool = self.solver.solve(node) # Has to return an array of dicts that include the action x, the obj func, and marginals
         # if sol_pool != sol_pool2:
         #     raise Exception(sol_pool,sol_pool2)
-        if len(sol_pool) < 3:
-            print("asdasd")
+        # if len(sol_pool) < 3:
+            # print("asdasd")
         if sol_pool is None:
             return None
         for sol in sol_pool:
@@ -183,7 +188,9 @@ class Actor:
         # if len(sol_pool) < 2:
         #     raise Exception("Solution pool needs atleast 2 elements")
         obj_values =np.array( [sol["fun"] for sol in sol_pool])
-        pol = policy_dist(obj_values,self.beta)
+        pol = policy_dist_np(obj_values,self.beta)
+        if len(pol) == 1:
+            print("asds")
         draw = categorical(pol)
         chosen_sol = sol_pool[draw]
         bounds = chosen_sol["bounds"]
@@ -204,7 +211,7 @@ class Actor:
 
 
 
-        self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
+        # self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
 
 
         # Compute model specific gradient
@@ -214,32 +221,43 @@ class Actor:
         lag_grads = [self.model.lagrange_gradient(a,new_state,eq_marg,ineq_marg) for a,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
 
         # Convert action solution to actual action
-        lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])
-        lag_grads[draw] = lag_grad_action_drawn
+        # lag_grad_action_drawn = self.model.lagrange_gradient(action['x'][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
+        # lag_grads[draw] = lag_grad_action_drawn
         lag_grads = np.array(lag_grads)
         # lag_grad_action_drawn = self.model.lagrange_gradient(chosen_sol["x"][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
         # Compute policy sensitivity
-        
-        nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
+        lag_grad_action_drawn = lag_grads[draw]
+        # old_nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
+        nab = nabla_log_pi_stable(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
         check_corr_grad(obj_values,nab,self.beta,lag_grads,draw) 
-        # check_with_cvxpylayers(chosen_sol["node"],bounds,lag_grad_action_drawn,action) # This is specific to the problem
-        
+        # obj_vals_torch = torch.tensor(obj_values,requires_grad= True)
+        # pol = policy_dist_torch(obj_vals_torch,self.beta)
+        # log_pol = torch.log(pol)
+        # log_pol[draw].backward() # dpi/dphi
+        # grad_log_pol = obj_vals_torch.grad
+        # nab =  (grad_log_pol @ lag_grads).detach().numpy()
+        if np.any(np.isnan(nab)):
+            print("asdas")
+        # true_grads = [check_with_cvxpylayers(sol["node"],sol["node"]["bounds"],lag_grad_action_drawn,action,new_state) for sol in sol_pool]
+        # true_grad =  check_with_cvxpylayers(chosen_sol["node"],chosen_sol["node"]["bounds"],lag_grad_action_drawn,action,new_state) # This is specific to the problem
+        # t_nab= nabla_log_pi_stable(true_grads[draw],obj_values,true_grads,self.beta)
+        t_nab = 0
         # Check with actual grad
-        node["bounds"] = bounds
-        ineq,eq = calc_actual_grad(node)
-        lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,ineq,eq)
-        lag_grads[draw] = lag_grad_action_drawn
-        lag_grads = np.array(lag_grads)
+        # node["bounds"] = bounds
+        # ineq,eq = calc_actual_grad(node)
+        # lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,ineq,eq)
+        # lag_grads[draw] = lag_grad_action_drawn
+        # lag_grads = np.array(lag_grads)
         # lag_grad_action_drawn = self.model.lagrange_gradient(chosen_sol["x"][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
         # Compute policy sensitivity
         
-        true_nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
-        
+        # true_nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
         
         info = {
             "fathomed" : chosen_sol["fathomed"],
-            "nab" : true_nab,
-            "n_sols" : len(sol_pool)
+            "nab" : nab,
+            "n_sols" : len(sol_pool),
+            "t_nab" : t_nab
         }
         return action,info
 
@@ -248,6 +266,10 @@ class Actor:
         # Not sure how q_table should be trained
 
         size = len(self.buffer.rewards)
+        self.reset_critic_iter+=1
+        if self.reset_critic_iter == 1:
+            self.critic.reset()
+            self.reset_critic_iter = 0
         if size == 0:
             raise Exception("Buffers are empty")
         for _ in tqdm(range(iters),leave=False,desc = "Training"):
@@ -263,25 +285,34 @@ class Actor:
             rewards = np.array(self.buffer.rewards)[indexes]
             actions = np.array(self.buffer.actions)[indexes]
             states = np.array(self.buffer.states)[indexes]
-            nxt_states = np.array(self.buffer.nxt_states)[indexes]
+            nxt_states = torch.tensor(self.buffer.nxt_states)[indexes]
+            # nxt_states = self.buffer.states [indexes]
             nabs = np.array(self.buffer.nabs)[indexes]
+            t_nabs = np.array(self.buffer.t_nabs)[indexes]
             # print(actions)
             # print(nabs)
             # self.q_table,_ = train_q_table(self.q_table,rewards,self.lr,self.df,actions,states,nxt_states)
             self.critic.train(rewards,actions,states,nxt_states)
+            # self.q_table.train(rewards,actions,states,nxt_states)
+
 
 
 
             # self.critic.train()
             qualities = self.critic.evaluate(actions,states)
-
-
+            # qualities_q_table = self.q_table.evaluate(actions,states)
+            if np.all(qualities == 0):
+                print("whaa")
 
 
 
             # print("q_table",self.q_table)
             # print("nabs",nabs)
-            pol_grad = (nabs.T @ qualities)/len(rewards)
+            pol_grad = ((nabs.T @ qualities)/len(rewards)).squeeze()
+            # t_pol_grad =((t_nabs.T @ qualities)/len(rewards)).squeeze()
+            # pol_grad = np.clip(pol_grad,-500,500)
+            # pol_grad = normalize(pol_grad)*150 if np.linalg.norm(pol_grad) > 300 else pol_grad
+            # pol_grad,self.m,self.v = adam_gradient(pol_grad,self.m,self.v,1,self.lr)
             self.model.update_params(pol_grad,self.lr)
         self.buffer.reset()
         return pol_grad
@@ -289,19 +320,61 @@ class Actor:
 
 
 
-
-    def update_buffers(self,reward,action,state,new_state,nab):
+    def update_buffers(self,reward,action,state,new_state,nab,t_nab):
         self.buffer.rewards.append(reward)
         self.buffer.actions.append(action)
         self.buffer.states.append(state)
         self.buffer.nxt_states.append(new_state)
         self.buffer.nabs.append(nab)
+        self.buffer.t_nabs.append(t_nab)
         # self.buffer.nabs.append(self.nab)
         # # Make sure we dont use it twice :)
         # del self.nab
 
 
 
+def normalize(v):
+    norm = np.linalg.norm(v)
+    if norm == 0: 
+       return v
+    return v / norm
+
+
+def adam_gradient(grads, m, v, t, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
+    """
+    Calculates the Adam-adjusted gradient.
+
+    Args:
+        grads (list of numpy arrays): The gradients of the parameters.
+        m (list of numpy arrays): Exponentially weighted average of past gradients (momentum).
+        v (list of numpy arrays): Exponentially weighted average of squared past gradients.
+        t (int): Timestep.
+        learning_rate (float, optional): The learning rate. Defaults to 0.001.
+        beta1 (float, optional): The exponential decay rate for the first moment estimates. Defaults to 0.9.
+        beta2 (float, optional): The exponential decay rate for the second moment estimates. Defaults to 0.999.
+        epsilon (float, optional): A small scalar to avoid division by zero. Defaults to 1e-8.
+
+    Returns:
+        tuple: The Adam-adjusted gradients (adam_grads), updated first moment estimates (m),
+               and updated second moment estimates (v).
+    """
+    adam_grads = []
+        # Update biased first moment estimate
+    m = beta1 * m + (1 - beta1) * grads
+
+    # Update biased second raw moment estimate
+    v = beta2 * v + (1 - beta2) * (grads ** 2)
+
+    # Compute bias-corrected first moment estimate
+    m_corrected = m / (1 - beta1 ** t)
+
+    # Compute bias-corrected second raw moment estimate
+    v_corrected = v / (1 - beta2 ** t)
+
+        # Calculate the Adam-adjusted gradient
+    adjusted_grad = learning_rate * m_corrected / (np.sqrt(v_corrected) + epsilon)
+
+    return adjusted_grad, m, v
 
 
 
@@ -312,6 +385,7 @@ class ExperienceBuffer:
         self.states = []
         self.nxt_states = []
         self.nabs = []
+        self.t_nabs = []
 
     def reset(self):
         del self.rewards[:]
@@ -319,3 +393,4 @@ class ExperienceBuffer:
         del self.states[:]
         del self.nxt_states[:]
         del self.nabs[:]
+        del self.t_nabs[:]

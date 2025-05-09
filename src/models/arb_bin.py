@@ -16,7 +16,7 @@ class Arbbin(Model): # Fix D
         self.integer = integer
         self.s_t = None
         self.n_value_pieces = aA.shape[0]
-        self.n_desc_vars = self.aA.shape[1]
+        self.n_desc_vars = self.aB.shape[1]
         self.pf = pf
 
     def get_desc_var_indices(self):

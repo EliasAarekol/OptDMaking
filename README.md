@@ -70,3 +70,5 @@
   - When fixing a bound some constraints might not be active anymore and some might become active, which could also cause the discrepancy
   - As i've seen sometimes they disagree but its hard to say if its numerical or because of "new constraint"
     - I think it has to be because of the "new constraint" but i cant explain why only one constraint seems to be active at a time, i would think that both were
+  - big problem is if it somehow ends up in a situation where every single state action pair only produces one bnb solution. Then the sensitivities become 0
+  - I think what is happening when it falls into a do only on thing state of mind is that

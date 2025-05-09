@@ -1,37 +1,41 @@
 
-name: "7 pieces restart,no noise, true_nab"
+name: "neg_grad"
 
 wandb_mode: "online"
 
-numpy_seed: 5
+numpy_seed: 16
 
-load: True
+load: False
 load_path: 'params/k4g2v0ol.yaml'
 
+
+device: 'cuda'
+
 model:
-  prob_size: 3
+  state_size: 6
+  action_size: 3
   n_cons: 6
   n_value_func: 2
   penalty_factor: 100
 
 gym:
-  pf: 1
-  gen_noise: False
+  pf: 100
+  noise_std: 0.1
 
 plotting:
-  window_size: 500
+  window_size: 100
 
 critic:
-  lr: 0.1
+  lr: 0.01
   df: 0.9
-  eps: 0.1
+  eps: 0.01
 
 actor:
   nn_sample: False
   lr: 0.01
   beta: 0.05
-  sample: False
-  num_samples: 0.5
+  sample: True
+  num_samples: 0.3
 
 
 train_iters: 20
