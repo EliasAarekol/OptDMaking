@@ -15,6 +15,7 @@ class Arb_binary(gym.Env):
         self.action_space = gym.spaces.MultiBinary(len(c))
         self.state = None
         
+        
     def _get_obs(self):
         pass
     def reset(self,seed = None):

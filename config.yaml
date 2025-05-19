@@ -1,9 +1,9 @@
 
-name: "c known seed_1 naive at sample grad proper"
+name: "unknown c only learn value unkown value at sample nn seed 4 "
 
 wandb_mode: "online"
 
-numpy_seed: 3
+numpy_seed: 4
 
 load: False
 load_path: 'params/k4g2v0ol.yaml'
@@ -14,16 +14,16 @@ device: 'cuda'
 model:
   state_size: 6
   action_size: 3
-  n_cons: 6
+  n_cons: 4
   n_value_func: 2
-  penalty_factor: 100
+  penalty_factor: 1000
 
 gym:
-  pf: 100
-  noise_std: 0.1
+  pf: 1000
+  noise_std: 1
 
 plotting:
-  window_size: 100
+  window_size: 10
 
 critic:
   lr: 0.01
@@ -32,8 +32,8 @@ critic:
 
 actor:
   sampled_grad: True
-  nn_sample: False
-  lr: 0.01
+  nn_sample: True
+  lr: 0.001
   beta: 0.05
   sample: False
   num_samples: 0.3
@@ -46,4 +46,4 @@ total_iters: 100000
 
 explicit_sol_time: 4
 comp_expected: False
-comp_expected_every: 50
+comp_expected_every: 100

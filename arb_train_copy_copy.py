@@ -1,6 +1,6 @@
 
 import numpy as np
-from src.models import arb_bin
+from src.models import arb_bin_without_relax,arb_bin
 from src.gym_envs import arb_binary_gym_env ,arb_discrete_gym_env,arb_cont_state_disc_action
 from src.critic import q_network,q_table,gae
 from src.solvers import bnb
@@ -27,25 +27,33 @@ def main():
     b = np.random.uniform(0,.1,size=(num_pieces,))
     c = np.random.uniform(0,10,size=(action_size,))
     state = np.random.randint(2,size = state_size)
-    # A = np.random.randint(0,2,size = (prob_size,prob_size))
-    # B = np.random.randint(0,2,size = (prob_size,prob_size))
 
     # A = np.random.randint(-1,2,size = (prob_size,prob_size))
     # B = np.random.randint(-1,2,size = (prob_size,prob_size))
 
-    C = np.random.uniform(0,1,size = (num_cons,state_size))
+    C = np.random.uniform(0,1,size = (num_cons-2,state_size))
+    C = np.vstack((C,np.zeros((2,state_size))))
     D = np.random.uniform(0,1,size = (num_cons,action_size))
-    E = np.random.uniform(10,20,size = (num_cons))
-    action_ub = 8
+    E = np.random.uniform(5,15,size = (num_cons-2))
+    E2 = np.random.uniform(1,10,size = (2))
+    E = np.hstack((E,E2))
+    # C = np.random.uniform(0,1,size = (num_cons,state_size))
+    # D = np.random.uniform(0,1,size = (num_cons,action_size))
+    # E = np.random.uniform(10,100,size = (num_cons,))
+    action_ub = 10
     
     bounds = [(0,action_ub) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
-    # c_model =  -np.random.uniform(0,10,size = (prob_size,))
-    # c_model =-np.random.normal(20,10,size = (prob_size,))
-    c_model = np.array(-c)
-    A = np.random.uniform(-1,1,size = (state_size,state_size))
-    B = np.random.uniform(-1,1,size = (state_size,action_size))
-    
+    # c_model =  -np.random.uniform(0,10,size = (action_size,))
+    c_model = -np.random.uniform(0,10,size = (1,)) * np.ones((action_size,))
+    # c_model =-np.random.normal(20,10,size = (action_size,))
+    # c_model = np.array(-c)
+    print(c_model)
+    A = np.random.uniform(0,.1,size = (state_size,state_size))
+    B = np.random.uniform(0,1,size = (state_size,action_size))
+    # A = np.random.randint(0,2,size = (state_size,state_size))
+    # B = np.random.randint(0,2,size = (state_size,action_size))
+
     aA =np.vstack((aA,np.random.uniform(0,0.1,size = (5,state_size)))) 
                   
     aB =np.vstack((aB,np.random.uniform(0,0.1,size = (5,action_size))) )
@@ -69,7 +77,7 @@ def main():
     # m = arb_bin.Arbbin(
     #     -np.array([20,0.1,0.2]),C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"]
     #     )
-    gym_model = arb_cont_state_disc_action.Arb_binary(c,np.zeros_like(state),A,B,C,D,E,config["gym"]["pf"],a_space_size=9,std = config["gym"]["noise_std"])
+    gym_model = arb_cont_state_disc_action.Arb_binary(c,np.zeros_like(state),A,B,C,D,E,config["gym"]["pf"],a_space_size=11,std = config["gym"]["noise_std"])
     m.update_state(gym_model.reset(0)[0])
 
     run = wandb.init(name = config["name"],mode = config["wandb_mode"],config = config)
@@ -190,7 +198,7 @@ def main():
                           }
                 
                 if len(ep_rewards) == window_size:
-                    metric["smooth_ep_reward"] = sum(ep_rewards[-window_size:])/window_size
+                    metric["smooth_ep_reward"] = sum(ep_rewards)/window_size
                     ep_rewards = []
                 if comp_expected and expected_ep_reward is not None:
                     metric["expected_ep_reward"] = expected_ep_reward
@@ -214,13 +222,13 @@ def main():
         aB_change = np.sum((aB-m.aB)**2)
         b_change = np.sum((b-m.b)**2)
         run.log({"c_diff" : c_diff , "aA_change" : aA_change , "aB_change" : aB_change, "b_change" : b_change,"pol_grad": np.linalg.norm(pol_grad)})
-        data = {}
-        data["c"] = m.c.tolist()
-        data["aA"] = m.aA.tolist()
-        data["aB"] = m.aB.tolist()
-        data["b"] = m.b.tolist()
-        with open(f'params/{run.id}.yaml','w') as f:
-            yaml.dump(data,f)
+        # data = {}
+        # data["c"] = m.c.tolist()
+        # data["aA"] = m.aA.tolist()
+        # data["aB"] = m.aB.tolist()
+        # data["b"] = m.b.tolist()
+        # with open(f'params/{run.id}.yaml','w') as f:
+        #     yaml.dump(data,f)
 
     
 
@@ -339,8 +347,10 @@ def calc_expected_reward(c,A,B,C,D,E,T,state,solver):
 
         c_agg,A_eq,b_eq,A_ub,b_ub = formulate_lp_with_initial_state(c,A,B,C,D,E,T,state)
 
-        bounds_agg = [(0,9) for _ in range(A_ub.shape[1])]
-        integer_agg = [1 for _ in range(A_ub.shape[1])]
+        bounds_agg = [(0,8) for _ in range(A_ub.shape[1])]
+        integer_actions = [ 1 for _ in range(c.size*T)]
+        integer_states = [ 0 for _ in range(A_ub.shape[1] - len(integer_actions))]
+        integer_agg = integer_actions + integer_states
         node = {
             "c" : c_agg,
             "A_ub" : A_ub,

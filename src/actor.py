@@ -159,8 +159,8 @@ class Actor:
         self.nn_sample = nn_sample
         self.sampled_grad = sampled_grad
         # self.q_table = q_table
-        self.m = 0
-        self.v = 0
+        self.m = None
+        self.v = None
         self.reset_critic_iter = 0
     # def init_q_table(self,q_table):
     #     self.q_table = q_table
@@ -228,7 +228,7 @@ class Actor:
             node["bounds"] = bounds
             ineq,eq = calc_actual_grad(node)
             lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,ineq,eq)
-            lag_grads[draw] = lag_grad_action_draw            
+            lag_grads[draw] = lag_grad_action_drawn            
         # lag_grad_action_drawn = self.model.lagrange_gradient(chosen_sol["x"][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
         lag_grads = np.array(lag_grads)
         # Compute policy sensitivity
@@ -270,10 +270,10 @@ class Actor:
         # Not sure how q_table should be trained
 
         size = len(self.buffer.rewards)
-        self.reset_critic_iter+=1
-        if self.reset_critic_iter == 1:
-            # self.critic.reset()
-            self.reset_critic_iter = 0
+        # self.reset_critic_iter+=1
+        # if self.reset_critic_iter == 1:
+        #     # self.critic.reset()
+        #     self.reset_critic_iter = 0
         if size == 0:
             raise Exception("Buffers are empty")
         for _ in tqdm(range(iters),leave=False,desc = "Training"):
@@ -309,15 +309,18 @@ class Actor:
             if np.all(qualities == 0):
                 print("whaa")
 
-
-
             # print("q_table",self.q_table)
             # print("nabs",nabs)
             pol_grad = ((nabs.T @ qualities)/len(rewards)).squeeze()
+            if self.v is None:
+                self.v = np.zeros_like(pol_grad)
+            if self.m is None:
+                self.m = np.zeros_like(pol_grad)
+
             # t_pol_grad =((t_nabs.T @ qualities)/len(rewards)).squeeze()
-            # pol_grad = np.clip(pol_grad,-500,500)
-            # pol_grad = normalize(pol_grad)*150 if np.linalg.norm(pol_grad) > 300 else pol_grad
-            # pol_grad,self.m,self.v = adam_gradient(pol_grad,self.m,self.v,1,self.lr)
+            # pol_grad = np.clip(pol_grad,-10,10)
+            # pol_grad = normalize(pol_grad)*10 if np.linalg.norm(pol_grad) > 50 else pol_grad
+            # pol_grad,self.m,self.v = adam_update_single(pol_grad,self.m,self.v,1,self.lr)
             self.model.update_params(pol_grad,self.lr)
         self.buffer.reset()
         return pol_grad
@@ -345,41 +348,58 @@ def normalize(v):
     return v / norm
 
 
-def adam_gradient(grads, m, v, t, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
+def adam_update_single(grads, m, v, t, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
     """
-    Calculates the Adam-adjusted gradient.
+    Calculates the Adam-adjusted gradient update for a single set of parameters.
 
     Args:
-        grads (list of numpy arrays): The gradients of the parameters.
-        m (list of numpy arrays): Exponentially weighted average of past gradients (momentum).
-        v (list of numpy arrays): Exponentially weighted average of squared past gradients.
-        t (int): Timestep.
+        grads (numpy array): The gradients of the parameters.
+        m (numpy array): Exponentially weighted average of past gradients (momentum).
+                         Should be initialized as a zero array with the same shape as grads.
+        v (numpy array): Exponentially weighted average of squared past gradients.
+                         Should be initialized as a zero array with the same shape as grads.
+        t (int): Timestep (should start from 1 and be incremented in the training loop).
         learning_rate (float, optional): The learning rate. Defaults to 0.001.
         beta1 (float, optional): The exponential decay rate for the first moment estimates. Defaults to 0.9.
         beta2 (float, optional): The exponential decay rate for the second moment estimates. Defaults to 0.999.
         epsilon (float, optional): A small scalar to avoid division by zero. Defaults to 1e-8.
 
     Returns:
-        tuple: The Adam-adjusted gradients (adam_grads), updated first moment estimates (m),
-               and updated second moment estimates (v).
+        tuple:
+            - adjusted_grad_update (numpy array): The Adam-adjusted gradient update term.
+                                                 (This is learning_rate * m_corrected / (sqrt(v_corrected) + epsilon))
+            - updated_m (numpy array): Updated first moment estimate.
+            - updated_v (numpy array): Updated second moment estimate.
     """
-    adam_grads = []
-        # Update biased first moment estimate
-    m = beta1 * m + (1 - beta1) * grads
+    if not all(isinstance(arr, np.ndarray) for arr in [grads, m, v]):
+        raise TypeError("grads, m, and v must be NumPy arrays.")
+    if not (grads.shape == m.shape == v.shape):
+        raise ValueError("grads, m, and v must have the same shape.")
+    if t < 1:
+        raise ValueError("Timestep 't' must be 1 or greater for bias correction.")
+
+    # Update biased first moment estimate
+    # m_t = beta1 * m_{t-1} + (1 - beta1) * g_t
+    m_updated = beta1 * m + (1 - beta1) * grads
 
     # Update biased second raw moment estimate
-    v = beta2 * v + (1 - beta2) * (grads ** 2)
+    # v_t = beta2 * v_{t-1} + (1 - beta2) * (g_t)^2
+    v_updated = beta2 * v + (1 - beta2) * (grads ** 2)
 
     # Compute bias-corrected first moment estimate
-    m_corrected = m / (1 - beta1 ** t)
+    # m_hat_t = m_t / (1 - beta1^t)
+    # The power ** t is applied to beta1 and beta2, not the entire denominator.
+    m_corrected = m_updated / (1 - beta1 ** t)
 
     # Compute bias-corrected second raw moment estimate
-    v_corrected = v / (1 - beta2 ** t)
+    # v_hat_t = v_t / (1 - beta2^t)
+    v_corrected = v_updated / (1 - beta2 ** t)
 
-        # Calculate the Adam-adjusted gradient
-    adjusted_grad = learning_rate * m_corrected / (np.sqrt(v_corrected) + epsilon)
+    # Calculate the Adam-adjusted gradient update
+    # This is the term that will be subtracted from (or added to) the parameters.
+    adjusted_grad_update = learning_rate * m_corrected / (np.sqrt(v_corrected) + epsilon)
 
-    return adjusted_grad, m, v
+    return adjusted_grad_update, m_updated, v_updated
 
 
 
