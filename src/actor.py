@@ -138,9 +138,6 @@ def check_with_cvxpylayers(node,bounds,lag_grad,drawn_x,state):
 class Actor:
     def __init__(self,model,solver,critic,beta = 1,lr = 0.01,df = 0.9,nn_sample = False,sampled_grad = False):
         self.model = model
-        # self.solver = bruteForceSolveMILP if solver == "brute" else BranchAndBound # Fix this
-
-        # Should maybe be own config thing
 
         self.desc_vars = self.model.get_desc_var_indices()
         self.lag_grads = None
@@ -148,50 +145,34 @@ class Actor:
         self.n_desc_vars = self.model.n_desc_vars
         self.nab = None
         self.buffer = ExperienceBuffer()
-        # self.q_table = None
         self.lr = lr
         self.df = df
         self.beta = beta
-        # self.solver = BruteForcePara(4) # Fix this
         self.solver = solver
         self.critic = critic
         self.value_est = 0
         self.nn_sample = nn_sample
         self.sampled_grad = sampled_grad
-        # self.q_table = q_table
         self.m = None
         self.v = None
         self.reset_critic_iter = 0
-    # def init_q_table(self,q_table):
-    #     self.q_table = q_table
 
     def act(self,new_state):
         # Compute next action
         self.model.update_state(new_state)
         node = self.model.get_LP_formulation()
-        # print("b_eq",node["b_eq"])
-        # print("state",new_state)
 
-        # solver = BruteForceMILP(node)
-        # solver.solve(store_pool= True)
-        # sol_pool2 = solver.pool
         sol_pool = self.solver.solve(node) # Has to return an array of dicts that include the action x, the obj func, and marginals
-        # if sol_pool != sol_pool2:
-        #     raise Exception(sol_pool,sol_pool2)
-        # if len(sol_pool) < 3:
-            # print("asdasd")
+
         if sol_pool is None:
             return None
         for sol in sol_pool:
             if np.any(np.abs(dLdx(node["c"],node["A_ub"],node["A_eq"],sol["ineqlin"],sol["eqlin"],sol["upper"],sol["lower"])) > 1e-4 ):
                 raise Exception("dLdx isnt 0")
-        #     print(dLdx(node["c"],node["A_ub"],node["A_eq"],sol["ineqlin"],sol["eqlin"],sol["upper"],sol["lower"]))
-        # if len(sol_pool) < 2:
-        #     raise Exception("Solution pool needs atleast 2 elements")
+
         obj_values =np.array( [sol["fun"] for sol in sol_pool])
         pol = policy_dist_np(obj_values,self.beta)
-        if len(pol) == 1:
-            print("asds")
+
         draw = categorical(pol)
         chosen_sol = sol_pool[draw]
         bounds = chosen_sol["bounds"]
@@ -199,12 +180,8 @@ class Actor:
         if chosen_sol["fathomed"]:
             if self.nn_sample:
                 action,bounds = nn_branch_sample(chosen_sol['x'][self.desc_vars],bounds)
-                # action = nn_branch_sample_only_keep_ints(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
             else:
                 action,bounds = naive_branch_sample(chosen_sol['x'][self.desc_vars],bounds)
-                
-                # action = naive_branch_sample_only_keep_ints(chosen_sol['x'][self.desc_vars],chosen_sol["conds"],len(chosen_sol['x'][self.desc_vars]),node["bounds"][self.desc_vars]) # this should be edited to be more general
-                # action = naive_branch_sample(chosen_sol['x'][:self.n_desc_vars],chosen_sol["conds"],self.n_desc_vars,node["bounds"][:self.n_desc_vars]) # this should be edited to be more general
 
         else:
             action = chosen_sol["x"]
@@ -212,7 +189,6 @@ class Actor:
 
 
 
-        # self.value_est = sol_pool[draw]["x"][-2] # Just for value function debug
 
 
         # Compute model specific gradient
@@ -223,40 +199,20 @@ class Actor:
         lag_grads = [self.model.lagrange_gradient(a,new_state,eq_marg,ineq_marg) for a,ineq_marg,eq_marg in zip(actions,ineq_margs,eq_margs)]
 
         # Convert action solution to actual action
-        # lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,eq_margs[draw],ineq_margs[draw])
         if self.sampled_grad:
             node["bounds"] = bounds
             ineq,eq = calc_actual_grad(node)
             lag_grad_action_drawn = self.model.lagrange_gradient(action,new_state,ineq,eq)
             lag_grads[draw] = lag_grad_action_drawn            
-        # lag_grad_action_drawn = self.model.lagrange_gradient(chosen_sol["x"][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
         lag_grads = np.array(lag_grads)
         # Compute policy sensitivity
         lag_grad_action_drawn = lag_grads[draw]
         # old_nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
         nab = nabla_log_pi_stable(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
         check_corr_grad(obj_values,nab,self.beta,lag_grads,draw) 
-        # obj_vals_torch = torch.tensor(obj_values,requires_grad= True)
-        # pol = policy_dist_torch(obj_vals_torch,self.beta)
-        # log_pol = torch.log(pol)
-        # log_pol[draw].backward() # dpi/dphi
-        # grad_log_pol = obj_vals_torch.grad
-        # nab =  (grad_log_pol @ lag_grads).detach().numpy()
-        if np.any(np.isnan(nab)):
-            print("asdas")
-        # true_grads = [check_with_cvxpylayers(sol["node"],sol["node"]["bounds"],lag_grad_action_drawn,action,new_state) for sol in sol_pool]
-        # true_grad =  check_with_cvxpylayers(chosen_sol["node"],chosen_sol["node"]["bounds"],lag_grad_action_drawn,action,new_state) # This is specific to the problem
-        # t_nab= nabla_log_pi_stable(true_grads[draw],obj_values,true_grads,self.beta)
-        t_nab = 0
-        # Check with actual grad
 
-        # lag_grads[draw] = lag_grad_action_drawn
-        # lag_grads = np.array(lag_grads)
-        # lag_grad_action_drawn = self.model.lagrange_gradient(chosen_sol["x"][self.desc_vars],new_state,eq_margs[draw],ineq_margs[draw])
-        # Compute policy sensitivity
-        
-        # true_nab = nabla_log_pi(lag_grad_action_drawn,obj_values,lag_grads,self.beta)
-        
+        t_nab = 0
+
         info = {
             "fathomed" : chosen_sol["fathomed"],
             "nab" : nab,
@@ -270,17 +226,12 @@ class Actor:
         # Not sure how q_table should be trained
 
         size = len(self.buffer.rewards)
-        # self.reset_critic_iter+=1
-        # if self.reset_critic_iter == 1:
-        #     # self.critic.reset()
-        #     self.reset_critic_iter = 0
+
         if size == 0:
             raise Exception("Buffers are empty")
         for _ in tqdm(range(iters),leave=False,desc = "Training"):
             if sample:
-                # t_indexes = np.ones((size*num_samples,))
-                # f_indexes = np.zeros((size*(1-num_samples),))
-                # indexes = np.vstack((t_indexes,f_indexes))
+
                 indexes = np.array(range(int(size*num_samples)))
                 np.random.shuffle(indexes)
             else:
@@ -290,37 +241,25 @@ class Actor:
             actions = np.array(self.buffer.actions)[indexes]
             states = np.array(self.buffer.states)[indexes]
             nxt_states = torch.tensor(self.buffer.nxt_states)[indexes]
-            # nxt_states = self.buffer.states [indexes]
             nabs = np.array(self.buffer.nabs)[indexes]
             t_nabs = np.array(self.buffer.t_nabs)[indexes]
-            # print(actions)
-            # print(nabs)
-            # self.q_table,_ = train_q_table(self.q_table,rewards,self.lr,self.df,actions,states,nxt_states)
+         
             self.critic.train(rewards,actions,states,nxt_states)
-            # self.q_table.train(rewards,actions,states,nxt_states)
 
 
 
 
-            # self.critic.train()
             qualities = self.critic.evaluate(actions,states,rewards,nxt_states)
-            # qualities_q_table = self.q_table.evaluate(actions,states)
             
             if np.all(qualities == 0):
                 print("whaa")
 
-            # print("q_table",self.q_table)
-            # print("nabs",nabs)
             pol_grad = ((nabs.T @ qualities)/len(rewards)).squeeze()
             if self.v is None:
                 self.v = np.zeros_like(pol_grad)
             if self.m is None:
                 self.m = np.zeros_like(pol_grad)
 
-            # t_pol_grad =((t_nabs.T @ qualities)/len(rewards)).squeeze()
-            # pol_grad = np.clip(pol_grad,-10,10)
-            # pol_grad = normalize(pol_grad)*10 if np.linalg.norm(pol_grad) > 50 else pol_grad
-            # pol_grad,self.m,self.v = adam_update_single(pol_grad,self.m,self.v,1,self.lr)
             self.model.update_params(pol_grad,self.lr)
         self.buffer.reset()
         return pol_grad

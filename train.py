@@ -27,8 +27,6 @@ def main():
     c = np.random.uniform(0,10,size=(action_size,))
     state = np.random.randint(2,size = state_size)
 
-    # A = np.random.randint(-1,2,size = (prob_size,prob_size))
-    # B = np.random.randint(-1,2,size = (prob_size,prob_size))
 
     C = np.random.uniform(0,1,size = (num_cons-2,state_size))
     C = np.vstack((C,np.zeros((2,state_size))))
@@ -36,22 +34,14 @@ def main():
     E = np.random.uniform(5,15,size = (num_cons-2))
     E2 = np.random.uniform(1,10,size = (2))
     E = np.hstack((E,E2))
-    # C = np.random.uniform(0,1,size = (num_cons,state_size))
-    # D = np.random.uniform(0,1,size = (num_cons,action_size))
-    # E = np.random.uniform(10,100,size = (num_cons,))
     action_ub = 10
     
     bounds = [(0,action_ub) for _ in range(len(c))]
     integer = [1 for _ in range(len(c))]
-    # c_model =  -np.random.uniform(0,10,size = (action_size,))
     c_model = -np.random.uniform(0,10,size = (1,)) * np.ones((action_size,))
-    # c_model =-np.random.normal(20,10,size = (action_size,))
-    # c_model = np.array(-c)
     print(c_model)
     A = np.random.uniform(0,.1,size = (state_size,state_size))
     B = np.random.uniform(0,1,size = (state_size,action_size))
-    # A = np.random.randint(0,2,size = (state_size,state_size))
-    # B = np.random.randint(0,2,size = (state_size,action_size))
 
     aA =np.vstack((aA,np.random.uniform(0,0.1,size = (5,state_size)))) 
                   
@@ -73,9 +63,6 @@ def main():
         )
 
 
-    # m = arb_bin.Arbbin(
-    #     -np.array([20,0.1,0.2]),C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"]
-    #     )
     gym_model = example_env.Arb_binary(c,np.zeros_like(state),A,B,C,D,E,config["gym"]["pf"],a_space_size=11,std = config["gym"]["noise_std"])
     m.update_state(gym_model.reset(0)[0])
 
@@ -90,13 +77,9 @@ def main():
     beta = config["actor"]["beta"]
     eps = config["critic"]["eps"]
 
-    # n_states = 999
     n_actions = action_ub*(100+10+1)+1
-    # q = np.zeros((n_actions,n_states))
-    # q_critic = q_table.Q_table(q,critic_lr,df,config["critic"]["eps"])
-    # dims = [state_size,128,128,n_actions]
+
     dims = [state_size,128,128,1]
-    # critic = q_network.Q_network(dims,critic_lr,df,eps,0.1,config['device'])
     critic = gae.GAE(dims,critic_lr,df,eps,0.1,config['device'])
     
     solver = bnb.BranchAndBoundRevamped()
@@ -161,35 +144,14 @@ def main():
                 act.update_buffers(reward,action_number,old_state,new_state,nab,t_nab)
 
             ep_reward += reward
-            # reward.append(reward)
             run.log({"reward" : reward, "action" : action_number, "n_sols" : act_info["n_sols"]})
 
 
-            # rewards.append(reward)
-            # actions.append(action_number)
-            # if iter_counter % log_every == 0:
-            #     metric = {      
-            #                 "reward" : rewards,
-            #                 "action" : actions,
-            #                 "ep_reward" : ep_rewards,
-            #                 "smooth_ep_reward" : moving_average(ep_rewards,window_size),
-            #                 "ep_length" : ep_lengths
-            #                 }
-            #     rewards = []
-            #     actions = []
-            #     ep_rewards = []
-            #     ep_lengths = []
-            #     if comp_expected and expected_ep_reward is not None:
-            #         metric["expected_ep_reward"] = expected_ep_reward
-            #         expected_ep_reward = None
-            #     run.log(metric,)
-                
 
 
             if terminated or i == rollout_iters-1:
                 ep_rewards.append(ep_reward)
-                # fathoms.append(fathomed_counter)
-                # ep_lengths.append(ep_length)
+
                 metric = {
                     "ep_reward" : ep_reward,
                     "fathomed_counter" : fathomed_counter,
@@ -214,22 +176,13 @@ def main():
 
 
         pol_grad = act.train(iters = training_iters,sample = config["actor"]["sample"],num_samples=config["actor"]["num_samples"])
-        # c_table.add_data(*m.c)
-        # run.log({"c_values" : c_table})
+
         c_diff = ((-c -m.c )**2).mean()
         aA_change = np.sum((aA-m.aA)**2 )
         aB_change = np.sum((aB-m.aB)**2)
         b_change = np.sum((b-m.b)**2)
         run.log({"c_diff" : c_diff , "aA_change" : aA_change , "aB_change" : aB_change, "b_change" : b_change,"pol_grad": np.linalg.norm(pol_grad)})
-        # data = {}
-        # data["c"] = m.c.tolist()
-        # data["aA"] = m.aA.tolist()
-        # data["aB"] = m.aB.tolist()
-        # data["b"] = m.b.tolist()
-        # with open(f'params/{run.id}.yaml','w') as f:
-        #     yaml.dump(data,f)
 
-    
 
 def formulate_lp_with_initial_state(c, A, B, D, E, F, T, s_initial):
     """
