@@ -6,7 +6,16 @@ from itertools import groupby
 import numpy as np # Added for np.concatenate and nanmin/nanmax
 import operator
 import wandb
+import matplotlib as mpl
 
+mpl.use("pgf")
+plt.rcParams.update({
+    "pgf.texsystem": "pdflatex",  # or "lualatex" / "xelatex" to match your document
+    "font.family": "serif",       # use same font family as LaTeX (e.g., serif, sans-serif)
+    "text.usetex": True,          # let matplotlib use LaTeX to render all text
+    "pgf.rcfonts": False,         # disable matplotlib's default font setup
+    "font.size": 10,              # match your document font size (e.g., 10pt, 11pt, 12pt)
+})
 def format_thousands(x, pos):
     return f'{x/1000:.0f}k'
 
@@ -17,22 +26,25 @@ os.makedirs(output_dir, exist_ok=True) # Ensure the output directory exists
 
 runs_api = api.runs(
     path="eliasaar_org/OptDMaking",
-    filters={"$or": [{"group": "unknown_c_unknown_value_at_fathomed_nn"},
-                     {"group": "unknown_c_unknown_value_at_sample_nn"}]},
+    filters={"$or": [{"group": "unknown_c_unknown_value_at_fathomed_naive_new"},
+                     {"group": "unknown_c_unknown_value_at_sample_naive_new"}]},
 )
 
-window_size = 10
+window_size = 100
 plot_index = 1
 # Sort runs by the last character of their name (assumed to be the seed)
 runs_sorted = sorted(list(runs_api), key=lambda x: x.name.strip()[-1])
 
 color_map = {
     "sample" : "C0",
-    "cut" : "C1"
+    "pruned" : "C1",
+    "nn" : "C2",
+    "uniform" : "C3"
 }
 
 # Group runs by the seed
-plt.figure(figsize= (7.5,2.5))
+# plt.figure(figsize= (7.5,2.5))
+fig = plt.figure()
 for seed, group in groupby(runs_sorted, lambda x: x.name.strip()[-1]):
     plt.subplot(3, 2, plot_index)
     plot_index += 1
@@ -43,17 +55,17 @@ for seed, group in groupby(runs_sorted, lambda x: x.name.strip()[-1]):
     # --- First pass: Collect all data for the current subplot ---
     for run in list(group): # Iterate through a copy of the group
         history = run.scan_history(
-            keys=["smooth_ep_reward", "_step"], page_size=100000, min_step=None, max_step=5e4
+            keys=["ep_reward", "_step"], page_size=100000, min_step=None, max_step=5e4
         )
         # Store raw data and steps for this run
-        raw_rewards = [row["smooth_ep_reward"] for row in history if row["smooth_ep_reward"] is not None] # Filter out None values
-        steps = [row["_step"] for row in history if row["smooth_ep_reward"] is not None] # Ensure steps align with filtered rewards
+        raw_rewards = [row["ep_reward"] for row in history if row["ep_reward"] is not None] # Filter out None values
+        steps = [row["_step"] for row in history if row["ep_reward"] is not None] # Ensure steps align with filtered rewards
 
         if not raw_rewards: # Skip if no valid reward data
             print(f"Skipping run {run.name} for seed {seed} due to no reward data.")
             continue
 
-        df_run = pd.DataFrame({'smooth_ep_reward': raw_rewards, "_step": steps, 'run_name': run.name})
+        df_run = pd.DataFrame({'ep_reward': raw_rewards, "_step": steps, 'run_name': run.name})
         all_data_for_subplot.extend(raw_rewards) # Add to list for overall min/max
         run_data_list.append(df_run)
 
@@ -74,7 +86,7 @@ for seed, group in groupby(runs_sorted, lambda x: x.name.strip()[-1]):
 
     # --- Second pass: Normalize and plot each run in the subplot ---
     for df_run_to_plot in run_data_list:
-        col_data = df_run_to_plot["smooth_ep_reward"]
+        col_data = df_run_to_plot["ep_reward"]
 
         # Normalize using subplot's min and max
         if subplot_max == subplot_min: # Avoid division by zero if all values are the same
@@ -84,29 +96,50 @@ for seed, group in groupby(runs_sorted, lambda x: x.name.strip()[-1]):
 
         smoothed_normalized_data = normalized_data.rolling(window=window_size, min_periods=1).mean() # min_periods=1 to handle edges
 
-        label = "cut" if "fathomed" in df_run_to_plot['run_name'].iloc[0] else "sample"
+        label = "pruned" if "cut" in df_run_to_plot['run_name'].iloc[0] else "sample"
         color = color_map[label]
-        plt.plot(df_run_to_plot["_step"], smoothed_normalized_data, label=label,color = color)
-
-    plt.xlabel('Step')
-    plt.ylabel('Episodic Cost')
+        plt.plot(df_run_to_plot["_step"].iloc[101:], smoothed_normalized_data.iloc[101:], label=label,color = color)
+        # loc_fig = plt.gcf()
+        # loc_fig.set_size_inches(2,1)
+    plt.xlabel('Step', fontsize=9)
+    plt.ylabel('Episodic Cost', fontsize=9)
     plt.title(f'Seed = {seed}')
     plt.grid(False)
-    handles, labels = plt.gca().get_legend_handles_labels()
+    plt.tick_params(
+        axis="both",   # apply to x and y axes
+        which="both",  # major and minor ticks
+        bottom=False, top=False,          # x-axis ticks off
+        left=False, right=False,          # y-axis ticks off
+        labelbottom=False, labelleft=False  # hide tick labels too
+    )
+handles, labels = plt.gca().get_legend_handles_labels()
 
-    hl = sorted(zip(handles, labels),
-            key=operator.itemgetter(1))
-    handles2, labels2 = zip(*hl)
+hl = sorted(zip(handles, labels),
+        key=operator.itemgetter(1))
+handles2, labels2 = zip(*hl)
 
-    plt.legend(handles2, labels2)
+fig.legend(handles2, labels2,loc='upper center', ncol=2)
     # plt.legend()
-    plt.gca().xaxis.set_major_formatter(ticker.FuncFormatter(format_thousands))
+    # plt.gca().xaxis.set_major_formatter(ticker.FuncFormatter(format_thousands))
 
 plt.tight_layout()
-plt.suptitle("Gradient sampling comparison, nearest neighbour")
-plt.show()
+# plt.suptitle("Gradient sampling comparison, nearest neighbour")
 
-filename = os.path.join(output_dir, 'per_subplot_normalized_comparison.pgf')
+# fig = plt.gcf()
+fig.set_size_inches(6,4)
+fig.subplots_adjust(
+    left=0.1,    # space from left edge
+    right=0.9,   # space from right edge
+    top=0.8,     # space from top
+    bottom=0.1,  # space from bottom
+    hspace=1.1,  # vertical spacing between subplots
+    wspace=0.3   # horizontal spacing between subplots
+)
+# fig.patch.set_linewidth(1)
+# fig.patch.set_edgecolor('grey')
+
+filename = os.path.join(output_dir, 'pruned_vs_sample_uniform.pgf')
 plt.savefig(filename)
-plt.close()
+plt.show()
+# plt.close()
 print(f"Combined per-subplot normalized plot saved as '{filename}'")

@@ -150,7 +150,7 @@ os.makedirs(output_dir, exist_ok=True) # Ensure the output directory exists
 
 runs_api = api.runs(
     path="eliasaar_org/OptDMaking",
-    filters={"$or": [{"group": "unknown_c_unknown_value_at_fathomed_naive"},
+    filters={"$or": [{"group": "unknown_c_unknown_value_at_fathomed_naive_new"},
                      {"group": "unknown_c_unknown_value_at_fathomed_nn"}]},
 )
 
