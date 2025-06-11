@@ -1,5 +1,5 @@
 
-from models.model_interface import Model
+from src.models.model_interface import Model
 import numpy as np
 from copy import copy
 

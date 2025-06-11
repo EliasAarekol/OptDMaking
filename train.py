@@ -1,7 +1,7 @@
 
 import numpy as np
-from gym_envs import example_env
-from models import example_model
+from src.gym_envs import example_env
+from src.models import example_model
 
 from src.critic import gae
 from src.solvers import bnb
