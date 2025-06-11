@@ -1,74 +1,9 @@
 # OptDMaking
 
-### TODO
+This repo contains the source code for my master thesis, completed june 2025. 
 
- - <s> Look at solvers structure, right now you need a new object for each node which sucks</S>
- - <s> Don't know if rewards from gym models should be positive or negative </s>
- - Implement gym mode properly so that can use gymnasium.make
- - <s> implement stochastic policy - need soluition pool </s>
- - <s> solution pool for solvers </s>
- - <s> solution pool for brute </s>
- - <s> implement advantage table </s>
- - <s> implement training</s>
- - <s> implement experience buffer </s>
- - rethink and restructure solvers
- - <s> proper seeding in gymnasium reset </s>
- - check intensity calculations (sanity check)
- - What do we actually need to store from solvers
-    - solution
-    - marginals/dual solution
-    - obj_func
- - <s> Rewrite solvers to not be OOP </s>
- - <s> Maybe wrap solvers into policy taker or something </s>
- - <s> How to handle end of run, think right now its working</s>
- - <s>  L1 relaxation </s>
- - <s> terminate when no more possible </s>
- - Handle action encoding better, right now returned by gym model
- - <s> Handle no feasible solutions to problem solved by lp </s> Shouldnt ever happen
- - For some reason gives 0 reward sometimes, i think gym model doesnt work properly
- - <s> Solve bruteforce with multiprocessing? </s>
- - <s> Redefine step update, perhaps as a self defined function </s>
- - <s> Clean up gradient code </s>
- - Check convergence and size of Q table
- - <s> Look for PPO or similar for training inspiration </s>
- - <s> Rewrite the brute force solver to be asynchronous - works for large problems but not for small </S>
- - <s> Something wrong with the brute force solver, sometimes gives non-integer solutions </s>
- - <s> Investigate cvxpylayers </s>
- - <s> Move pool outside </s>
- - Make gradient code general for LP problem
- -<s> Fix file structure </s>
- - penalty factor needs to be lower than any action you want to be picked, can be learned? I think
- - Think the value function in the 
- - <s>Make actor impl flexible so that i can use different critics and solvers </S>
- - Solver configs should be set at init
- - remove q_Table from utils maybe
- - fix doc for all classes
- - fix abstact class inputs
- - fix knapsack a and b update
- - fix brute force strucutre, remove a lot
- - Assume for now we require an upper bound on every variable, s.t the feasible space isnt infinite
- - Parralleize branch and bound
-   Is currently slower than brute force approach
-   Actually quite similar to parallell brute force approach
- - Fix config for brute force
- - Naive and nn have similar performance if all parameters have a bound
- - Fathoming sometimes just stops
- - small lr tests seem to experience that fathomed branches have the same conditions and conds on every variable
- - Had wrong sign on reward for breaching constraint (think its fixed now) does much worse
- - Increasing pf in gym model only seems to give lower reward, might point to that its not learning to improve
-  - Made an error in the plotting so that it was looking like it was improving :( 
- - Finds optimal solution then gets stuck just doing a rollout of all 0s and then a single move, which is prob why the episodic rewards come so rarely
- - Explicit solution can be wrong due to a too "long" problem can be infeasible
- - Smooth episodic reward actually shows the transition, smoothing in wandb doesnt show this
- - What sebastien said might relate to that the naive approach isnt converging because its not the correct gradient for that action
- - Correct gradient seems to work when i fixed the sampling a bit (let the lag grad be calculated using the chosen sol action not the sampled one)
- - I think corr gradient works now but a remaining problem is still that you cant actually guarantee that we get enough exploration. We might just only have one fathomed branch, and 
- - What i'm doing with the storing of conditons is really stupid, i should just store the bounds and propagate them. They are the only things that change.
-  - Can then use this for the cvxpy check
-  - CVXPY check takes 2/3 of act time
-  - If the cvxpy disagrees its often that its orthogonal, which i think has something do to with active constraints
-  - When fixing a bound some constraints might not be active anymore and some might become active, which could also cause the discrepancy
-  - As i've seen sometimes they disagree but its hard to say if its numerical or because of "new constraint"
-    - I think it has to be because of the "new constraint" but i cant explain why only one constraint seems to be active at a time, i would think that both were
-  - big problem is if it somehow ends up in a situation where every single state action pair only produces one bnb solution. Then the sensitivities become 0
-  - I think what is happening when it falls into a do only on thing state of mind is that
+This is a framework for applying RL over MILP optimization models for Operations Reserach. 
+
+## Getting Started
+See train.py for an example.
+
