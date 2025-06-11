@@ -6,7 +6,7 @@ from multiprocessing import Pool
 import time
 import scipy
 import highspy
-from src.solvers.solver_template import Solver
+from solvers.solver_interface import Solver
 
 
 

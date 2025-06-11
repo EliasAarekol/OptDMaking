@@ -1,18 +1,17 @@
 
 import numpy as np
-from src.models import arb_bin_without_relax,arb_bin
-from src.gym_envs import arb_binary_gym_env ,arb_discrete_gym_env,arb_cont_state_disc_action
-from src.critic import q_network,q_table,gae
+from gym_envs import example_env
+from models import example_model
+
+from src.critic import gae
 from src.solvers import bnb
-import matplotlib.pyplot as plt
-from time import time
+
 from tqdm import tqdm
 import wandb
 from src import actor
 import yaml
 from scipy.sparse import lil_matrix, hstack, vstack, identity, block_diag, csr_matrix
-# import cProfile
-# from pstats import Stats
+
 def main():
     config = yaml.safe_load(open('config.yaml'))
 
@@ -69,7 +68,7 @@ def main():
         b = np.array(params['b'])
         
     
-    m = arb_bin.Arbbin(
+    m = example_model.Arbbin(
         c_model,C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"]
         )
 
@@ -77,7 +76,7 @@ def main():
     # m = arb_bin.Arbbin(
     #     -np.array([20,0.1,0.2]),C,D,E,aA,aB,b,bounds,integer,config["model"]["penalty_factor"]
     #     )
-    gym_model = arb_cont_state_disc_action.Arb_binary(c,np.zeros_like(state),A,B,C,D,E,config["gym"]["pf"],a_space_size=11,std = config["gym"]["noise_std"])
+    gym_model = example_env.Arb_binary(c,np.zeros_like(state),A,B,C,D,E,config["gym"]["pf"],a_space_size=11,std = config["gym"]["noise_std"])
     m.update_state(gym_model.reset(0)[0])
 
     run = wandb.init(name = config["name"],mode = config["wandb_mode"],config = config)

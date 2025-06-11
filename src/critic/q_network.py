@@ -1,4 +1,4 @@
-from src.critic.critic_template import Critic
+from critic.critic_interface import Critic
 import torch.nn.functional as F
 import torch
 import torch.nn as nn

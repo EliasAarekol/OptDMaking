@@ -1,4 +1,4 @@
-from src.critic.critic_template import Critic
+from critic.critic_interface import Critic
 import src.utils.q_table as q
 import numpy as np
 
