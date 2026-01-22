@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 from copy import copy
+from itertools import product
+from copy import deepcopy
+
 
 def categorical(p):
     return (p.cumsum(-1) >= np.random.uniform(size=p.shape[:-1])[..., None]).argmax(-1)
@@ -94,6 +97,84 @@ def nn_branch_sample_only_keep_ints(sol,conds,action_size,bounds): # This doesnt
         action[i] = max(min(round(sol[i]),bound[1]),bound[0]) if i not in vars  else action[i]
     return action
 
+#Addition to the original thesis codebase
+
+def knn_branch_sample_simple(sol,bounds,k=3):
+    action = np.zeros_like(sol, dtype=int)
+    new_bounds = copy(bounds)
+
+    candidates_per_var = []
+    for i,var in enumerate(sol):
+        if isint(var):
+            action[i] = int(var)
+            candidates_per_var.append([int(var)])
+        else:
+            center = int(round(sol[i]))
+            half = k // 2
+            low = max(int(bounds[i][0]), center - half)
+            high = min(int(bounds[i][1]), center + half)
+            candidates = list(range(low, high + 1))
+            if len(candidates) < k:
+                left = max(int(bounds[i][0]), center - k + 1)
+                right = min(int(bounds[i][1]), center + k - 1)
+                candidates = list(range(left, right + 1))
+                candidates = [c for c in candidates if c >= int(bounds[i][0]) and c <= int(bounds[i][1])]
+            candidates_per_var.append(candidates)
+            action[i] = int(np.random.choice(candidates))
+        new_bounds[i] = (action[i],action[i])
+    return action, new_bounds
+
+
+
+def knn_branch_sample(sol, bounds, k = 9, max_pts = 5000):
+
+    dims = len(np.array(sol))
+
+    temp_bounds = []
+    for i in range(dims):
+        if i < len(bounds):
+            low, high = bounds[i]  
+        else:
+            low, high = None, None  
+
+        if low is None:
+            low = np.floor(sol[i] - k)  
+        if high is None:
+            high = np.ceil(sol[i] + k)   
+
+        temp_bounds.append((low, high))
+
+
+    ranges = [range(int(low), int(high) +1) for (low, high) in temp_bounds]
+    total_space = np.prod([len(r) for r in ranges])
+
+    if total_space > max_pts:
+        ranges = [range(max(int(low), int(np.floor(s - k))), min(int(high), int(np.ceil(s + k))) + 1) for s, (low, high) in zip(sol, temp_bounds)]
+
+
+    all_points = np.array(list(product(*ranges)))
+    dist = np.sum(np.abs(all_points - sol), axis=1)
+
+    idx = np.argsort(dist)[:k]
+    nearest_points = all_points[idx]
+    nearest_dist = dist[idx]
+
+    beta = 0.5
+    weights = np.exp(-beta * nearest_dist)
+    weights /= np.sum(weights)
+
+
+    idx_choice = np.random.choice(len(nearest_points), p=weights)
+    action = nearest_points[idx_choice]   # dette blir 1D-array med samme dimensjon som sol
+
+    new_bounds = deepcopy(bounds)
+
+    for i, val in enumerate(action):
+        new_bounds[i] = (action[i], action[i])
+    
+    return action, new_bounds
+
+## End addition
 
 # def nn_branch_sample(sol,conds,action_size,bounds): # This doesnt handle if there are several conditions on a variable
 #     action = np.zeros(shape = (action_size,))
